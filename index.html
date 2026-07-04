@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="FreteHub Salvador Comercial - MVP de gestao e cotacao de fretes." />
+    <title>FreteHub Salvador Comercial</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <div class="app-shell">
+      <aside class="sidebar">
+        <div class="brand">
+          <div class="brand-mark">F</div>
+          <div>
+            <strong>FreteHub</strong>
+            <span>Salvador Comercial</span>
+          </div>
+        </div>
+
+        <nav class="nav" aria-label="Menu principal">
+          <button class="nav-item active" data-view="dashboard">Dashboard</button>
+          <button class="nav-item" data-view="pedidos">Pedidos</button>
+          <button class="nav-item" data-view="cotacao">Cotacao</button>
+          <button class="nav-item" data-view="transportadoras">Transportadoras</button>
+          <button class="nav-item" data-view="tarifas">Tarifas</button>
+          <button class="nav-item" data-view="auditoria">Auditoria</button>
+          <button class="nav-item" data-view="relatorios">Relatorios</button>
+          <button class="nav-item" data-view="configuracoes">Configuracoes</button>
+        </nav>
+      </aside>
+
+      <main class="main">
+        <header class="topbar">
+          <div>
+            <h1 id="page-title">Dashboard</h1>
+            <p id="page-subtitle">Visao operacional de fretes, tarifas e pedidos.</p>
+          </div>
+          <div class="user-box">
+            <label for="profileSelect">Perfil</label>
+            <select id="profileSelect"></select>
+          </div>
+        </header>
+
+        <section id="app" class="content" aria-live="polite"></section>
+      </main>
+    </div>
+
+    <template id="emptyState">
+      <div class="empty-state">
+        <strong>Nenhum registro encontrado.</strong>
+        <span>Ajuste os filtros ou cadastre novos dados.</span>
+      </div>
+    </template>
+
+    <script src="./app.js"></script>
+  </body>
+</html>
