@@ -20,7 +20,7 @@ Ele cobre:
 
 ## Como abrir
 
-Abra o arquivo `index.html` no navegador.
+Abra o arquivo `https://jefersonvasconcelos.github.io/fretehub-mvp/` no navegador.
 
 Nao ha instalacao, build ou backend nesta primeira versao.
 
