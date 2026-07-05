@@ -41,7 +41,7 @@ A V2 inclui:
 Abra o arquivo abaixo no navegador:
 
 ```text
-index.html
+https://jefersonvasconcelos.github.io/fretehub-mvp/
 ```
 
 Nao precisa instalar nada.
