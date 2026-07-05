@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>FreteHub V2</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <main class="shell">
+      <aside class="side">
+        <div class="brand">
+          <span class="brand-mark">F</span>
+          <div>
+            <strong>FreteHub</strong>
+            <span>Salvador Comercial</span>
+          </div>
+          <button id="hideNav" class="nav-collapse" type="button" title="Esconder menu" aria-label="Esconder menu">‹</button>
+        </div>
+        <nav>
+          <span class="nav-group">Operação</span>
+          <button data-view="dashboard"><span class="nav-icon">▦</span><span>Dashboard</span></button>
+          <button data-view="orders"><span class="nav-icon">◇</span><span>Pedidos</span></button>
+          <button data-view="quote"><span class="nav-icon">▤</span><span>Simulador de Frete</span></button>
+
+          <span class="nav-group">Cadastros</span>
+          <button data-view="carriers"><span class="nav-icon">▱</span><span>Transportadoras</span></button>
+          <button data-view="tariffs"><span class="nav-icon">▧</span><span>Tarifas</span></button>
+
+          <span class="nav-group">Integrações & Análise</span>
+          <button data-view="protheus"><span class="nav-icon">⌁</span><span>Integração Protheus</span></button>
+          <button data-view="channels"><span class="nav-icon">⌁</span><span>Canais de Venda</span></button>
+          <button data-view="reports"><span class="nav-icon">▥</span><span>Relatórios</span></button>
+          <button data-view="audit"><span class="nav-icon">⬡</span><span>Auditoria</span></button>
+          <button data-view="settings"><span class="nav-icon">⚙</span><span>Configurações</span></button>
+        </nav>
+      </aside>
+      <section class="page">
+        <header class="topbar">
+          <button id="showNav" class="secondary hidden" type="button">Menu</button>
+          <div class="topbar-brand">
+            <span class="topbar-icon" aria-hidden="true"></span>
+            <strong>FreteHub &mdash; Gest&atilde;o de Fretes</strong>
+            <span class="mvp-pill">MVP demonstrativo</span>
+          </div>
+          <div id="userMenu" class="user-menu hidden">
+            <button id="userMenuButton" class="user-menu-button" type="button" aria-haspopup="true" aria-expanded="false">
+              <span class="user-icon" aria-hidden="true"></span>
+              <span id="userMenuName">Usuario</span>
+              <span id="userMenuRole" class="role-pill">Perfil</span>
+              <span class="chevron" aria-hidden="true">⌄</span>
+            </button>
+            <div id="userMenuDropdown" class="user-dropdown hidden">
+              <strong id="userMenuEmail">usuario@empresa.com.br</strong>
+              <span class="dropdown-label">Trocar perfil (demo)</span>
+              <button type="button" data-demo-role="Administrador">Administrador</button>
+              <button type="button" data-demo-role="Gestor de Logistica">Gestor de Logistica</button>
+              <button type="button" data-demo-role="Operador de Frete">Operador de Frete</button>
+              <button type="button" data-demo-role="Financeiro">Financeiro</button>
+              <button type="button" data-demo-role="Consulta">Consulta</button>
+              <button id="logout" class="dropdown-logout" type="button">Sair</button>
+            </div>
+          </div>
+        </header>
+        <section class="page-heading">
+          <h1 id="title">Login</h1>
+          <p id="subtitle">Entre para acessar a API V2.</p>
+        </section>
+        <section id="app"></section>
+      </section>
+    </main>
+    <script src="./app.js"></script>
+  </body>
+</html>

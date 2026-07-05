@@ -42,3 +42,4 @@ Nao ha instalacao, build ou backend nesta primeira versao.
 - Importacao XLSX.
 - Integracoes com Protheus, Mercado Livre e Shopee.
 - Testes automatizados do motor de cotacao.
+
