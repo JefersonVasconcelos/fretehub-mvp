@@ -384,13 +384,34 @@ let state = loadState();
 let activeView = "dashboard";
 let lastQuoteId = "";
 
+function cloneInitialState() {
+  if (typeof structuredClone === "function") return structuredClone(initialState);
+  return JSON.parse(JSON.stringify(initialState));
+}
+
+function normalizeState(value) {
+  const base = cloneInitialState();
+  if (!value || typeof value !== "object") return base;
+  return {
+    ...base,
+    ...value,
+    carriers: Array.isArray(value.carriers) ? value.carriers : base.carriers,
+    rates: Array.isArray(value.rates) ? value.rates : base.rates,
+    orders: Array.isArray(value.orders) ? value.orders : base.orders,
+    quotes: Array.isArray(value.quotes) ? value.quotes : base.quotes,
+    quoteOptions: Array.isArray(value.quoteOptions) ? value.quoteOptions : base.quoteOptions,
+    audits: Array.isArray(value.audits) ? value.audits : base.audits,
+    currentUserId: users.some((user) => user.id === value.currentUserId) ? value.currentUserId : base.currentUserId,
+  };
+}
+
 function loadState() {
   const saved = localStorage.getItem(STORAGE_KEY);
-  if (!saved) return structuredClone(initialState);
+  if (!saved) return cloneInitialState();
   try {
-    return { ...structuredClone(initialState), ...JSON.parse(saved) };
+    return normalizeState(JSON.parse(saved));
   } catch {
-    return structuredClone(initialState);
+    return cloneInitialState();
   }
 }
 
@@ -1144,6 +1165,19 @@ document.querySelectorAll(".nav-item").forEach((button) => {
   button.addEventListener("click", () => setView(button.dataset.view));
 });
 
-setupProfileSelect();
-setView("dashboard");
+function startApp() {
+  try {
+    setupProfileSelect();
+    setView("dashboard");
+  } catch (error) {
+    console.error(error);
+    localStorage.removeItem(STORAGE_KEY);
+    state = cloneInitialState();
+    setupProfileSelect();
+    setView("dashboard");
+    toast("Dados locais da V1 foram restaurados.");
+  }
+}
+
+startApp();
 
