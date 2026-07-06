@@ -65,8 +65,29 @@ function toggleUserMenu() {
 }
 
 function badge(value) {
-  const cls = /Erro|Falha|Inativa|Vencida|Nao/.test(value) ? "bad" : /Pendente|Aguardando|Novo/.test(value) ? "warn" : "ok";
-  return `<span class="badge ${cls}">${value || "-"}</span>`;
+  const label = displayText(value || "-");
+  const cls = /Erro|Falha|Inativa|Vencida|Não/.test(label) ? "bad" : /Pendente|Aguardando|Novo/.test(label) ? "warn" : "ok";
+  return `<span class="badge ${cls}">${escapeHtml(label)}</span>`;
+}
+
+function displayText(value) {
+  return String(value ?? "-")
+    .replaceAll("Cotacao", "Cotação")
+    .replaceAll("cotacao", "cotação")
+    .replaceAll("Integracao", "Integração")
+    .replaceAll("integracao", "integração")
+    .replaceAll("Expedicao", "Expedição")
+    .replaceAll("expedicao", "expedição")
+    .replaceAll("Propria", "Própria")
+    .replaceAll("propria", "própria")
+    .replaceAll("medio", "médio")
+    .replaceAll("Media", "Média")
+    .replaceAll("Regiao", "Região")
+    .replaceAll("regiao", "região")
+    .replaceAll("disponivel", "disponível")
+    .replaceAll("Disponivel", "Disponível")
+    .replaceAll("Exportacao", "Exportação")
+    .replaceAll("exportacao", "exportação");
 }
 
 function toast(message) {
@@ -159,7 +180,7 @@ async function renderDashboard() {
     <div class="dashboard-metrics">
       ${dashboardMetric("Pedidos totais", d.pedidos, "cube", "blue")}
       ${dashboardMetric("Aguardando frete", waiting, "timer", "orange")}
-      ${dashboardMetric("Erros de integracao", integrationErrors, "alert", "red")}
+      ${dashboardMetric("Erros de integração", integrationErrors, "alert", "red")}
       ${dashboardMetric("Frete acima do limite", freightAboveLimit, "trend", "orange")}
       ${dashboardMetric("Tarifas vencidas", d.tarifasVencidas, "money", "red")}
       ${dashboardMetric("Tarifas prox. vencimento", ratesExpiring, "truck", "orange")}
@@ -174,16 +195,16 @@ async function renderDashboard() {
         ${pieChart(channelRows)}
       </section>
       <section class="card dashboard-chart">
-        <h3>Custo medio por canal</h3>
+        <h3>Custo médio por canal</h3>
         ${barChart(channelCosts, { max: 100, color: "#1976d2", ticks: [100, 75, 50, 25, 0] })}
       </section>
       <section class="card dashboard-chart">
-        <h3>Pedidos por regiao</h3>
+        <h3>Pedidos por região</h3>
         ${barChart(regionRows, { max: 8, color: "#248f45", ticks: [8, 6, 4, 2, 0] })}
       </section>
       <section class="card dashboard-chart">
         <h3>Ranking transportadoras</h3>
-        <div class="table compact-table"><table><thead><tr><th>Transportadora</th><th>Pedidos</th><th>Custo (R$)</th><th>Prazo medio</th></tr></thead><tbody>
+        <div class="table compact-table"><table><thead><tr><th>Transportadora</th><th>Pedidos</th><th>Custo (R$)</th><th>Prazo médio</th></tr></thead><tbody>
           ${ranking.map((item) => `<tr><td>${escapeHtml(item.name)}</td><td>${item.orders}</td><td>${item.cost.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td><td>${item.deadline.toFixed(1)}d</td></tr>`).join("")}
         </tbody></table></div>
       </section>
@@ -207,9 +228,11 @@ function carrierName(id) {
 }
 
 function dashboardMetric(label, value, icon, tone) {
+  const numeric = Number(value);
+  const isNumeric = Number.isFinite(numeric);
   return `<section class="card dashboard-metric">
     <span>${escapeHtml(label)}</span>
-    <strong data-count="${Number(value || 0)}">0</strong>
+    <strong ${isNumeric ? `data-count="${numeric}"` : ""}>${isNumeric ? "0" : escapeHtml(value)}</strong>
     <i class="metric-icon ${tone}" data-icon="${icon}"></i>
   </section>`;
 }
@@ -237,7 +260,7 @@ function pieChart(items) {
   });
   return `<div class="pie-wrap">
     <div class="pie-chart" style="background: conic-gradient(${segments.join(", ")});"></div>
-    <div class="pie-legend">${items.map((item, index) => `<span><i style="background:${colors[index % colors.length]}"></i>${escapeHtml(item.label)}</span>`).join("")}</div>
+    <div class="pie-legend">${items.map((item, index) => `<span><i style="background:${colors[index % colors.length]}"></i>${escapeHtml(displayText(item.label))}</span>`).join("")}</div>
   </div>`;
 }
 
@@ -255,7 +278,7 @@ function statusBadge(value) {
         : lower.includes("exped") || lower.includes("pendente") || lower.includes("aguardando") || lower.includes("transito") || lower.includes("coletado") || lower.includes("parcial")
           ? "warn"
           : "ok";
-  return `<span class="status-pill ${cls}">${escapeHtml(value || "-")}</span>`;
+  return `<span class="status-pill ${cls}">${escapeHtml(displayText(value || "-"))}</span>`;
 }
 
 function orderCarrier(order) {
@@ -318,7 +341,7 @@ function renderOrdersTable(orders) {
     const index = state.orders.indexOf(order);
     return `<tr>
       <td>${escapeHtml(order.numero)}</td>
-      <td>${escapeHtml(order.canal || "-")}</td>
+      <td>${escapeHtml(displayText(order.canal || "-"))}</td>
       <td>${escapeHtml(order.cliente || "-")}</td>
       <td>${escapeHtml(order.ufDestino || "-")}</td>
       <td>${escapeHtml(order.cepDestino || "-")}</td>
@@ -336,12 +359,12 @@ function renderOrdersTable(orders) {
 }
 
 function exportOrdersCsv(orders) {
-  const header = ["Pedido", "Canal", "Cliente", "UF", "CEP", "Valor", "Peso", "Transp.", "Frete", "Prazo", "Status", "Protheus", "Expedicao"];
+  const header = ["Pedido", "Canal", "Cliente", "UF", "CEP", "Valor", "Peso", "Transp.", "Frete", "Prazo", "Status", "Protheus", "Expedição"];
   const rows = orders.map((order) => {
     const index = state.orders.indexOf(order);
     return [
       order.numero,
-      order.canal,
+      displayText(order.canal),
       order.cliente,
       order.ufDestino,
       order.cepDestino,
@@ -350,13 +373,13 @@ function exportOrdersCsv(orders) {
       orderCarrier(order),
       orderFreight(order),
       orderDeadline(order),
-      order.status,
+      displayText(order.status),
       orderProtheusStatus(order),
       orderExpeditionStatus(order, index),
     ];
   });
   const csv = [header, ...rows]
-    .map((row) => row.map((cell) => `"${String(cell ?? "").replace(/"/g, '""')}"`).join(";"))
+    .map((row) => row.map((cell) => `"${displayText(cell).replace(/"/g, '""')}"`).join(";"))
     .join("\n");
   const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
   const link = document.createElement("a");
@@ -397,14 +420,14 @@ function renderOrders() {
         <span>Status</span>
         <select id="orderStatusFilter">
           <option value="all">Todos</option>
-          ${orderStatusOptions().map((status) => `<option value="${escapeHtml(status)}">${escapeHtml(status)}</option>`).join("")}
+          ${orderStatusOptions().map((status) => `<option value="${escapeHtml(status)}">${escapeHtml(displayText(status))}</option>`).join("")}
         </select>
       </label>
       <label>
         <span>Canal</span>
         <select id="orderChannelFilter">
           <option value="all">Todos</option>
-          ${orderChannelOptions().map((channel) => `<option value="${escapeHtml(channel)}">${escapeHtml(channel)}</option>`).join("")}
+          ${orderChannelOptions().map((channel) => `<option value="${escapeHtml(channel)}">${escapeHtml(displayText(channel))}</option>`).join("")}
         </select>
       </label>
       <label>
@@ -548,23 +571,45 @@ function renderCarriers() {
 
 function renderQuote(orderId) {
   setActive("quote");
-  setTitle("Cotacao", "Cotacao real salva pela API.");
-  const order = state.orders.find((o) => o.id === orderId) || state.orders[0];
+  setTitle("Cotação", "Cotação real salva pela API.");
+  const order = state.orders.find((o) => o.id === orderId) || quoteDemoOrder();
+  const defaults = quoteDefaults(order);
   $("app").innerHTML = `<section class="card form">
     <label>Pedido <select id="pedido">${state.orders.map((o) => `<option value="${o.id}" ${o.id === order.id ? "selected" : ""}>${o.numero} - ${o.cliente}</option>`).join("")}</select></label>
-    <label>CEP destino <input id="cepDestino" value="${order.cepDestino}"></label>
-    <label>UF destino <input id="ufDestino" value="${order.ufDestino}"></label>
-    <label>Valor declarado <input id="valorDeclarado" type="number" value="${order.valorPedido}"></label>
-    <label>Peso real kg <input id="pesoRealKg" type="number" value="${order.pesoRealKg}"></label>
-    <label>Comprimento cm <input id="comprimentoCm" type="number" value="${order.comprimentoCm}"></label>
-    <label>Largura cm <input id="larguraCm" type="number" value="${order.larguraCm}"></label>
-    <label>Altura cm <input id="alturaCm" type="number" value="${order.alturaCm}"></label>
-    <label>Volumes <input id="volumes" type="number" value="${order.volumes}"></label>
-    <label>Prioridade <select id="prioridade"><option value="menor_custo">Menor custo</option><option value="menor_prazo">Menor prazo</option><option value="equilibrio">Equilibrio</option></select></label>
-    <button class="primary" id="calculate">Calcular cotacao</button>
+    <label>CEP destino <input id="cepDestino" value="${defaults.cepDestino}"></label>
+    <label>UF destino <input id="ufDestino" value="${defaults.ufDestino}"></label>
+    <label>Valor declarado <input id="valorDeclarado" type="number" value="${defaults.valorPedido}"></label>
+    <label>Peso real kg <input id="pesoRealKg" type="number" value="${defaults.pesoRealKg}"></label>
+    <label>Comprimento cm <input id="comprimentoCm" type="number" value="${defaults.comprimentoCm}"></label>
+    <label>Largura cm <input id="larguraCm" type="number" value="${defaults.larguraCm}"></label>
+    <label>Altura cm <input id="alturaCm" type="number" value="${defaults.alturaCm}"></label>
+    <label>Volumes <input id="volumes" type="number" value="${defaults.volumes}"></label>
+    <label>Prioridade <select id="prioridade"><option value="menor_custo">Menor custo</option><option value="menor_prazo">Menor prazo</option><option value="equilibrio">Equilíbrio</option></select></label>
+    <button class="primary" id="calculate">Calcular cotação</button>
   </section><section id="quoteResult" style="margin-top:16px"></section>`;
   $("pedido").onchange = () => renderQuote($("pedido").value);
   $("calculate").onclick = calculateQuote;
+}
+
+function quoteDemoOrder() {
+  return state.orders.find((order) => order.numero === "SC-DEMO-FRETE")
+    || state.orders.find((order) => order.ufDestino === "SP" && String(order.cepDestino || "").startsWith("013"))
+    || state.orders[0];
+}
+
+function quoteDefaults(order) {
+  if (order?.numero === "SC-DEMO-FRETE" || !order) return order || {};
+  return {
+    ...order,
+    cepDestino: order.ufDestino === "SP" ? "01310000" : order.cepDestino,
+    ufDestino: order.ufDestino || "SP",
+    valorPedido: Number(order.valorPedido || 240),
+    pesoRealKg: Math.min(Number(order.pesoRealKg || 10), 10),
+    comprimentoCm: 30,
+    larguraCm: 20,
+    alturaCm: 15,
+    volumes: 1,
+  };
 }
 
 async function calculateQuote() {
@@ -582,10 +627,12 @@ async function calculateQuote() {
     prioridade: $("prioridade").value,
   };
   const result = await request("/api/quotes", { method: "POST", body: JSON.stringify(payload) });
+  const visibleOptions = result.options.filter((option) => option.disponivel);
+  const rows = visibleOptions;
   $("quoteResult").innerHTML = `<div class="table"><table><thead><tr><th>Transportadora</th><th>Frete</th><th>Prazo</th><th>Status</th><th>Regra</th></tr></thead><tbody>
-    ${result.options.map((o) => `<tr><td>${o.transportadoraNome}${o.recomendada ? `<br>${badge("Recomendada")}` : ""}</td><td>${o.disponivel ? brl(o.valorFrete) : "-"}</td><td>${o.prazoDias || "-"}</td><td>${badge(o.disponivel ? "Disponivel" : o.statusTarifa)}</td><td>${o.disponivel ? o.regrasAplicadas.join("<br>") : o.motivoIndisponibilidade}</td></tr>`).join("")}
+    ${rows.map((o) => `<tr><td>${o.transportadoraNome}${o.recomendada ? `<br>${badge("Recomendada")}` : ""}</td><td>${o.disponivel ? brl(o.valorFrete) : "-"}</td><td>${o.prazoDias || "-"}</td><td>${badge(o.disponivel ? "Disponível" : o.statusTarifa)}</td><td>${o.disponivel ? o.regrasAplicadas.join("<br>") : o.motivoIndisponibilidade}</td></tr>`).join("") || `<tr><td colspan="5" class="empty-state">Nenhuma cotação disponível para os dados informados.</td></tr>`}
   </tbody></table></div>`;
-  toast("Cotacao salva no banco.");
+  toast("Cotação salva no banco.");
 }
 
 function renderImport() {
@@ -615,46 +662,43 @@ async function renderProfitability() {
   ]);
   state.profitabilitySkus = skus;
   state.profitabilityPremises = premises;
-  const negative = skus.filter((item) => item.resultado.lucroEstimado < 0).length;
+  const critical = skus.filter((item) => item.resultado.lucroEstimado < 0 || item.resultado.score < 50).length;
+  const attention = skus.filter((item) => item.resultado.score >= 50 && item.resultado.score < 75).length;
+  const healthy = skus.filter((item) => item.resultado.score >= 75).length;
   const cubic = skus.filter((item) => item.resultado.alertas.includes("Risco por cubagem")).length;
   const avgScore = Math.round(skus.reduce((total, item) => total + Number(item.resultado.score || 0), 0) / Math.max(skus.length, 1));
+  const avgMargin = skus.reduce((total, item) => total + Number(item.resultado.margemPercentual || 0), 0) / Math.max(skus.length, 1);
   $("app").innerHTML = `<section class="profitability-page">
-    <div class="toolbar">
-      <div>
+    <div class="profitability-header">
+      <div class="profitability-actions">
         <button class="primary" id="auditProfitability" type="button">Auditar margens</button>
         <button class="secondary" id="exportProfitability" type="button">Exportar CSV</button>
         <button class="secondary" id="downloadProfitabilityModel" type="button">Modelo CSV</button>
         <button class="secondary" id="importProfitabilityButton" type="button">Importar CSV</button>
         <input id="importProfitabilityFile" class="hidden" type="file" accept=".csv,text/csv">
       </div>
+      <div class="feature-status">
+        <span><strong>Funcional:</strong> auditar, importar, exportar e salvar premissas.</span>
+        <span><strong>Em breve:</strong> kits, campanhas e integração direta com marketplaces.</span>
+      </div>
     </div>
-    <div class="dashboard-metrics">
+    <div class="dashboard-metrics profitability-kpis">
       ${dashboardMetric("SKUs auditados", skus.length, "cube", "blue")}
-      ${dashboardMetric("Com prejuizo", negative, "alert", "red")}
+      ${dashboardMetric("Rentáveis", healthy, "trend", "green")}
+      ${dashboardMetric("Em atenção", attention, "timer", "orange")}
+      ${dashboardMetric("Críticos", critical, "alert", "red")}
+      ${dashboardMetric("Margem média", `${avgMargin.toFixed(1)}%`, "money", avgMargin >= 15 ? "green" : avgMargin >= 8 ? "orange" : "red")}
+      ${dashboardMetric("Score médio", avgScore, "trend", "green")}
       ${dashboardMetric("Alerta cubagem", cubic, "truck", "orange")}
-      ${dashboardMetric("Score medio", avgScore, "trend", "green")}
     </div>
     <section class="card">
       <h3>Premissas por canal</h3>
-      <div class="table"><table><thead><tr><th>Canal</th><th>Comissão %</th><th>Taxa fixa</th><th>Imposto %</th><th>Ads %</th><th>Parcelamento %</th><th>Frete grátis mín.</th><th>Margem alvo %</th></tr></thead><tbody>
-        ${premises.map((premise) => `<tr data-premise="${escapeHtml(premise.codigo)}">
-          <td><strong>${escapeHtml(premise.nome)}</strong></td>
-          <td><input class="compact-input" data-premise-field="comissaoPercentual" value="${premise.comissaoPercentual}"></td>
-          <td><input class="compact-input" data-premise-field="taxaFixa" value="${premise.taxaFixa}"></td>
-          <td><input class="compact-input" data-premise-field="impostoPercentual" value="${premise.impostoPercentual}"></td>
-          <td><input class="compact-input" data-premise-field="adsPercentual" value="${premise.adsPercentual}"></td>
-          <td><input class="compact-input" data-premise-field="parcelamentoPercentual" value="${premise.parcelamentoPercentual}"></td>
-          <td><input class="compact-input" data-premise-field="freteGratisMinimo" value="${premise.freteGratisMinimo}"></td>
-          <td><input class="compact-input" data-premise-field="margemAlvoPercentual" value="${premise.margemAlvoPercentual}"></td>
-        </tr>`).join("")}
-      </tbody></table></div>
+      <div class="premise-grid">${premiseCards(premises)}</div>
       <button class="primary" id="saveProfitabilityPremises" type="button">Salvar premissas</button>
     </section>
     <section class="card">
       <h3>Auditoria de margem por SKU</h3>
-      <div class="table"><table><thead><tr><th>SKU</th><th>Canal</th><th>Preço</th><th>Preço mínimo</th><th>Lucro</th><th>Margem</th><th>Score</th><th>Alertas</th><th>Ação recomendada</th></tr></thead><tbody>
-        ${profitabilityRows(skus)}
-      </tbody></table></div>
+      <div class="profitability-card-grid">${profitabilityCards(skus)}</div>
     </section>
   </section>`;
   $("auditProfitability").onclick = auditProfitability;
@@ -663,24 +707,64 @@ async function renderProfitability() {
   $("importProfitabilityButton").onclick = () => $("importProfitabilityFile").click();
   $("importProfitabilityFile").onchange = importProfitabilityCsv;
   $("saveProfitabilityPremises").onclick = saveProfitabilityPremises;
+  animateDashboardNumbers();
 }
 
-function profitabilityRows(skus) {
+function premiseCards(premises) {
+  return premises.map((premise) => `<section class="premise-card" data-premise="${escapeHtml(premise.codigo)}">
+    <strong>${escapeHtml(premise.nome)}</strong>
+    <label>Comissão % <input class="compact-input" data-premise-field="comissaoPercentual" value="${premise.comissaoPercentual}"></label>
+    <label>Taxa fixa <input class="compact-input" data-premise-field="taxaFixa" value="${premise.taxaFixa}"></label>
+    <label>Imposto % <input class="compact-input" data-premise-field="impostoPercentual" value="${premise.impostoPercentual}"></label>
+    <label>Ads % <input class="compact-input" data-premise-field="adsPercentual" value="${premise.adsPercentual}"></label>
+    <label>Parcelamento % <input class="compact-input" data-premise-field="parcelamentoPercentual" value="${premise.parcelamentoPercentual}"></label>
+    <label>Frete grátis mín. <input class="compact-input" data-premise-field="freteGratisMinimo" value="${premise.freteGratisMinimo}"></label>
+    <label>Margem alvo % <input class="compact-input" data-premise-field="margemAlvoPercentual" value="${premise.margemAlvoPercentual}"></label>
+  </section>`).join("");
+}
+
+function profitabilityCards(skus) {
   return skus.map((item) => {
     const result = item.resultado;
-    const scoreClass = result.score >= 75 ? "ok" : result.score >= 50 ? "warn" : "bad";
-    return `<tr>
-      <td><strong>${escapeHtml(item.sku)}</strong><br><span>${escapeHtml(item.nome)}</span></td>
-      <td>${escapeHtml(channelLabel(item.canal))}</td>
-      <td>${brl(result.precoVenda)}</td>
-      <td>${brl(result.precoMinimo)}</td>
-      <td>${brl(result.lucroEstimado)}</td>
-      <td>${result.margemPercentual}%</td>
-      <td><span class="badge ${scoreClass}">${result.score}</span></td>
-      <td>${result.alertas.map((alert) => badge(alert)).join(" ")}</td>
-      <td>${escapeHtml(result.acaoRecomendada)}</td>
-    </tr>`;
-  }).join("") || `<tr><td colspan="9" class="empty-state">Nenhum SKU cadastrado.</td></tr>`;
+    const score = scoreMeta(result.score, result.lucroEstimado);
+    const profitClass = result.lucroEstimado >= 0 ? "positive" : "negative";
+    return `<section class="profitability-card ${score.tone}">
+      <div class="profitability-card-head">
+        <div>
+          <strong>${escapeHtml(item.sku)}</strong>
+          <span>${escapeHtml(item.nome)}</span>
+        </div>
+        <div class="score-indicator ${score.tone}">
+          <b>${result.score}</b>
+          <small>${score.label}</small>
+        </div>
+      </div>
+      <div class="profitability-meta">
+        <span>${escapeHtml(channelLabel(item.canal))}</span>
+        <span>${item.estoque} un. em estoque</span>
+      </div>
+      <div class="profitability-values">
+        <div><span>Preço venda</span><strong>${brl(result.precoVenda)}</strong></div>
+        <div><span>Preço mínimo</span><strong>${brl(result.precoMinimo)}</strong></div>
+        <div><span>Lucro estimado</span><strong class="${profitClass}">${brl(result.lucroEstimado)}</strong></div>
+        <div><span>Margem</span><strong>${result.margemPercentual}%</strong></div>
+      </div>
+      <div class="profitability-alerts">${result.alertas.map((alert) => `<span class="score-pill ${alertTone(alert)}">${escapeHtml(alert)}</span>`).join("")}</div>
+      <div class="recommendation"><span>Ação recomendada</span><strong>${escapeHtml(result.acaoRecomendada)}</strong></div>
+    </section>`;
+  }).join("") || `<div class="empty-state">Nenhum SKU cadastrado.</div>`;
+}
+
+function scoreMeta(score, profit) {
+  if (profit < 0 || score < 50) return { tone: "score-red", label: "Crítico" };
+  if (score < 75) return { tone: "score-yellow", label: "Atenção" };
+  return { tone: "score-green", label: "Saudável" };
+}
+
+function alertTone(alert) {
+  if (alert.includes("Prejuizo") || alert.includes("Prejuízo")) return "score-red";
+  if (alert.includes("cubagem") || alert.includes("Margem") || alert.includes("Frete gratis") || alert.includes("Frete grátis")) return "score-yellow";
+  return "score-green";
 }
 
 function channelLabel(code) {
@@ -1113,15 +1197,15 @@ function renderProtheusQueue(logs) {
 
 async function renderReports() {
   setActive("reports");
-  setTitle("Relatorios", "Filtros e exportacao. CSV disponivel; XLSX planejado.");
+  setTitle("Relatórios", "Filtros e exportação. CSV e XLSX disponíveis.");
   const reports = buildReports();
   $("app").innerHTML = `<div class="report-page">
     <div class="report-actions">
       <button class="secondary" id="exportCsv">Exportar CSV</button>
-      <button class="secondary" id="exportXlsx">XLSX</button>
+      <button class="secondary" id="exportXlsx">Exportar XLSX</button>
     </div>
     <section class="card report-filter">
-      <label>Tipo de relatorio
+      <label>Tipo de relatório
         <select id="reportType">
           ${reports.map((report) => `<option value="${report.id}">${escapeHtml(report.label)}</option>`).join("")}
         </select>
@@ -1137,7 +1221,7 @@ async function renderReports() {
   };
   $("reportType").onchange = renderSelectedReport;
   $("exportCsv").onclick = () => exportReportCsv(reports.find((item) => item.id === $("reportType").value) || reports[0]);
-  $("exportXlsx").onclick = () => toast("Exportacao XLSX planejada para a proxima etapa.");
+  $("exportXlsx").onclick = () => exportReportXlsx(reports.find((item) => item.id === $("reportType").value) || reports[0]);
   $("reportType").value = "cost-carrier";
   renderSelectedReport();
 }
@@ -1151,8 +1235,8 @@ function buildReports() {
   return [
     {
       id: "cost-period",
-      label: "Custo por periodo",
-      columns: ["Periodo", "Pedidos", "Custo total", "Frete cobrado", "Diferenca"],
+      label: "Custo por período",
+      columns: ["Período", "Pedidos", "Custo total", "Frete cobrado", "Diferença"],
       rows: [sumOrders("Base atual", activeOrders)],
     },
     {
@@ -1168,7 +1252,7 @@ function buildReports() {
     {
       id: "cost-channel",
       label: "Custo por canal",
-      columns: ["Canal", "Pedidos", "Custo total", "Ticket medio"],
+      columns: ["Canal", "Pedidos", "Custo total", "Ticket médio"],
       rows: groupedRows(activeOrders, (order) => order.canal || "Sem canal", (label, orders) => [
         label,
         orders.length,
@@ -1178,8 +1262,8 @@ function buildReports() {
     },
     {
       id: "cost-state",
-      label: "Custo por estado/regiao",
-      columns: ["UF destino", "Pedidos", "Custo total", "Prazo medio"],
+      label: "Custo por estado/região",
+      columns: ["UF destino", "Pedidos", "Custo total", "Prazo médio"],
       rows: groupedRows(activeOrders, (order) => order.ufDestino || "Sem UF", (label, orders) => [
         label,
         orders.length,
@@ -1189,7 +1273,7 @@ function buildReports() {
     },
     {
       id: "without-quote",
-      label: "Pedidos sem cotacao",
+      label: "Pedidos sem cotação",
       columns: ["Pedido", "Cliente", "Canal", "Destino", "Status"],
       rows: activeOrders
         .filter((order) => Number(order.freteCalculado || 0) <= 0)
@@ -1197,8 +1281,8 @@ function buildReports() {
     },
     {
       id: "freight-gap",
-      label: "Divergencia de frete (calculado vs cobrado)",
-      columns: ["Pedido", "Transportadora", "Calculado", "Cobrado", "Diferenca"],
+      label: "Divergência de frete (calculado vs cobrado)",
+      columns: ["Pedido", "Transportadora", "Calculado", "Cobrado", "Diferença"],
       rows: activeOrders
         .filter((order) => Number(order.freteCalculado || 0) || Number(order.freteCobrado || 0))
         .map((order) => [
@@ -1219,7 +1303,7 @@ function buildReports() {
     },
     {
       id: "rates-expiring",
-      label: "Tarifas proximas do vencimento",
+      label: "Tarifas próximas do vencimento",
       columns: ["Tarifa", "Transportadora", "Destino", "Vigencia fim", "Dias restantes"],
       rows: state.rates
         .filter((rate) => {
@@ -1234,7 +1318,7 @@ function buildReports() {
     {
       id: "carrier-performance",
       label: "Desempenho de transportadoras",
-      columns: ["Transportadora", "Pedidos", "Custo medio", "Prazo medio", "Custo total"],
+      columns: ["Transportadora", "Pedidos", "Custo médio", "Prazo médio", "Custo total"],
       rows: groupedRows(
         activeOrders.filter((order) => order.transportadoraSelecionadaId),
         (order) => carrierName(order.transportadoraSelecionadaId),
@@ -1254,12 +1338,12 @@ function buildReports() {
       rows: activeOrders
         .filter((order) => order.status === "Erro de Integracao" || order.statusProtheus === "Erro")
         .map((order) => [order.numero, order.cliente, carrierName(order.transportadoraSelecionadaId), `${order.prazoDias || 0} dias`, order.status]),
-      note: "A V2 ainda nao possui data real de entrega; este relatorio usa erros operacionais como indicio.",
+      note: "A V2 ainda não possui data real de entrega; este relatório usa erros operacionais como indício.",
     },
     {
       id: "planned-realized",
       label: "Frete previsto x realizado",
-      columns: ["Pedido", "Previsto", "Realizado", "Diferenca", "Status"],
+      columns: ["Pedido", "Previsto", "Realizado", "Diferença", "Status"],
       rows: activeOrders
         .filter((order) => Number(order.freteCalculado || 0) || Number(order.freteCobrado || 0))
         .map((order) => [
@@ -1293,10 +1377,10 @@ function sumOrders(label, orders) {
 }
 
 function renderReportTable(report) {
-  const rows = report.rows.length ? report.rows : [["Sem dados para este relatorio."]];
+  const rows = report.rows.length ? report.rows : [["Sem dados para este relatório."]];
   return `${report.note ? `<p>${escapeHtml(report.note)}</p>` : ""}
     <div class="table"><table><thead><tr>${report.columns.map((column) => `<th>${escapeHtml(column)}</th>`).join("")}</tr></thead><tbody>
-    ${rows.map((row) => `<tr>${row.map((cell) => `<td>${escapeHtml(cell)}</td>`).join("")}</tr>`).join("")}
+    ${rows.map((row) => `<tr>${row.map((cell) => `<td>${escapeHtml(displayText(cell))}</td>`).join("")}</tr>`).join("")}
   </tbody></table></div>`;
 }
 
@@ -1312,8 +1396,157 @@ function exportReportCsv(report) {
   URL.revokeObjectURL(url);
 }
 
+function exportReportXlsx(report) {
+  const rows = [report.columns, ...report.rows];
+  const blob = new Blob([createXlsx(rows, report.label || "Relatorio")], {
+    type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+  });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = `${report.id}.xlsx`;
+  link.click();
+  URL.revokeObjectURL(url);
+  toast("Arquivo XLSX exportado.");
+}
+
+function createXlsx(rows, sheetName) {
+  const safeSheetName = xmlEscape(String(sheetName || "Relatorio").slice(0, 31));
+  const sheetRows = rows.map((row, rowIndex) => {
+    const cells = row.map((cell, colIndex) => {
+      const ref = `${xlsxColumn(colIndex + 1)}${rowIndex + 1}`;
+      return `<c r="${ref}" t="inlineStr"><is><t>${xmlEscape(displayText(cell))}</t></is></c>`;
+    }).join("");
+    return `<row r="${rowIndex + 1}">${cells}</row>`;
+  }).join("");
+  const files = {
+    "[Content_Types].xml": `<?xml version="1.0" encoding="UTF-8"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/></Types>`,
+    "_rels/.rels": `<?xml version="1.0" encoding="UTF-8"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/></Relationships>`,
+    "xl/workbook.xml": `<?xml version="1.0" encoding="UTF-8"?><workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets><sheet name="${safeSheetName}" sheetId="1" r:id="rId1"/></sheets></workbook>`,
+    "xl/_rels/workbook.xml.rels": `<?xml version="1.0" encoding="UTF-8"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/></Relationships>`,
+    "xl/worksheets/sheet1.xml": `<?xml version="1.0" encoding="UTF-8"?><worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetData>${sheetRows}</sheetData></worksheet>`,
+  };
+  return zipStore(files);
+}
+
+function xlsxColumn(number) {
+  let name = "";
+  while (number > 0) {
+    number -= 1;
+    name = String.fromCharCode(65 + (number % 26)) + name;
+    number = Math.floor(number / 26);
+  }
+  return name;
+}
+
+function xmlEscape(value) {
+  return String(value ?? "").replace(/[<>&'"]/g, (char) => ({
+    "<": "&lt;",
+    ">": "&gt;",
+    "&": "&amp;",
+    "'": "&apos;",
+    '"': "&quot;",
+  })[char]);
+}
+
+function zipStore(files) {
+  const encoder = new TextEncoder();
+  const localParts = [];
+  const centralParts = [];
+  let offset = 0;
+  Object.entries(files).forEach(([name, content]) => {
+    const nameBytes = encoder.encode(name);
+    const data = encoder.encode(content);
+    const crc = crc32(data);
+    const local = zipHeader(30);
+    writeZipLocalHeader(local, crc, data.length, nameBytes.length);
+    localParts.push(local, nameBytes, data);
+    const central = zipHeader(46);
+    writeZipCentralHeader(central, crc, data.length, nameBytes.length, offset);
+    centralParts.push(central, nameBytes);
+    offset += local.length + nameBytes.length + data.length;
+  });
+  const centralSize = centralParts.reduce((total, part) => total + part.length, 0);
+  const end = zipHeader(22);
+  writeZipEndHeader(end, Object.keys(files).length, centralSize, offset);
+  return concatBytes([...localParts, ...centralParts, end]);
+}
+
+function zipHeader(size) {
+  return new Uint8Array(size);
+}
+
+function writeZipLocalHeader(bytes, crc, size, nameLength) {
+  const view = new DataView(bytes.buffer);
+  view.setUint32(0, 0x04034b50, true);
+  view.setUint16(4, 20, true);
+  view.setUint16(6, 0x0800, true);
+  view.setUint16(8, 0, true);
+  view.setUint32(10, zipDosDateTime(), true);
+  view.setUint32(14, crc, true);
+  view.setUint32(18, size, true);
+  view.setUint32(22, size, true);
+  view.setUint16(26, nameLength, true);
+}
+
+function writeZipCentralHeader(bytes, crc, size, nameLength, offset) {
+  const view = new DataView(bytes.buffer);
+  view.setUint32(0, 0x02014b50, true);
+  view.setUint16(4, 20, true);
+  view.setUint16(6, 20, true);
+  view.setUint16(8, 0x0800, true);
+  view.setUint16(10, 0, true);
+  view.setUint32(12, zipDosDateTime(), true);
+  view.setUint32(16, crc, true);
+  view.setUint32(20, size, true);
+  view.setUint32(24, size, true);
+  view.setUint16(28, nameLength, true);
+  view.setUint32(42, offset, true);
+}
+
+function writeZipEndHeader(bytes, fileCount, centralSize, centralOffset) {
+  const view = new DataView(bytes.buffer);
+  view.setUint32(0, 0x06054b50, true);
+  view.setUint16(8, fileCount, true);
+  view.setUint16(10, fileCount, true);
+  view.setUint32(12, centralSize, true);
+  view.setUint32(16, centralOffset, true);
+}
+
+function zipDosDateTime() {
+  const now = new Date();
+  const time = (now.getHours() << 11) | (now.getMinutes() << 5) | Math.floor(now.getSeconds() / 2);
+  const date = ((now.getFullYear() - 1980) << 9) | ((now.getMonth() + 1) << 5) | now.getDate();
+  return (date << 16) | time;
+}
+
+function crc32(bytes) {
+  let crc = -1;
+  for (const byte of bytes) {
+    crc = (crc >>> 8) ^ CRC_TABLE[(crc ^ byte) & 0xff];
+  }
+  return (crc ^ -1) >>> 0;
+}
+
+const CRC_TABLE = Array.from({ length: 256 }, (_, index) => {
+  let crc = index;
+  for (let bit = 0; bit < 8; bit += 1) crc = (crc & 1) ? (0xedb88320 ^ (crc >>> 1)) : (crc >>> 1);
+  return crc >>> 0;
+});
+
+function concatBytes(parts) {
+  const total = parts.reduce((sum, part) => sum + part.length, 0);
+  const output = new Uint8Array(total);
+  let offset = 0;
+  parts.forEach((part) => {
+    output.set(part, offset);
+    offset += part.length;
+  });
+  return output;
+}
+
 function csvCell(value) {
-  return `"${String(value ?? "").replace(/"/g, '""')}"`;
+  return `"${displayText(value).replace(/"/g, '""')}"`;
 }
 
 const settingsDefaults = {
@@ -1900,7 +2133,8 @@ document.addEventListener("keydown", (event) => {
 });
 
 $("showNav").onclick = () => setNavHidden(false);
-setNavHidden(localStorage.getItem("fretehub-v2-nav-hidden") === "1");
+const savedNavPreference = localStorage.getItem("fretehub-v2-nav-hidden");
+setNavHidden(savedNavPreference ? savedNavPreference === "1" : window.matchMedia("(max-width: 900px)").matches);
 
 (async function start() {
   if (!token) return renderLogin();

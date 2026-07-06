@@ -657,6 +657,122 @@ def seed_expanded_model(conn):
                 (f"hist-{order['id']}", order["id"], "PEDIDO", None, order["status"], "Seed inicial V2", "u1", "SISTEMA"),
             )
 
+    conn.execute("UPDATE carriers SET status = 'Ativa' WHERE id = 't1'")
+    conn.execute(
+        """
+        INSERT INTO rates
+        (id, nome, transportadora_id, modalidade, uf_origem, uf_destino, cep_inicio, cep_fim, peso_inicio_kg, peso_fim_kg,
+         taxa_fixa, kg_excedente, combustivel_percentual, risco_percentual, interior_valor, pedagio_valor,
+         seguro_percentual, prazo_dias, minimo_frete, maximo_frete, status, vigencia_inicio, vigencia_fim, regras_adicionais)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ON CONFLICT(id) DO UPDATE SET
+          nome = excluded.nome,
+          transportadora_id = excluded.transportadora_id,
+          modalidade = excluded.modalidade,
+          uf_origem = excluded.uf_origem,
+          uf_destino = excluded.uf_destino,
+          cep_inicio = excluded.cep_inicio,
+          cep_fim = excluded.cep_fim,
+          peso_inicio_kg = excluded.peso_inicio_kg,
+          peso_fim_kg = excluded.peso_fim_kg,
+          taxa_fixa = excluded.taxa_fixa,
+          kg_excedente = excluded.kg_excedente,
+          combustivel_percentual = excluded.combustivel_percentual,
+          risco_percentual = excluded.risco_percentual,
+          interior_valor = excluded.interior_valor,
+          pedagio_valor = excluded.pedagio_valor,
+          seguro_percentual = excluded.seguro_percentual,
+          prazo_dias = excluded.prazo_dias,
+          minimo_frete = excluded.minimo_frete,
+          maximo_frete = excluded.maximo_frete,
+          status = excluded.status,
+          vigencia_inicio = excluded.vigencia_inicio,
+          vigencia_fim = excluded.vigencia_fim,
+          regras_adicionais = excluded.regras_adicionais
+        """,
+        (
+            "tar-demo-sp",
+            "Demo SP - Cotação válida",
+            "t1",
+            "Fracionado",
+            "BA",
+            "SP",
+            "01000000",
+            "19999999",
+            0,
+            80,
+            24,
+            1.8,
+            0.08,
+            0.002,
+            0,
+            6,
+            0.001,
+            4,
+            42,
+            0,
+            "Ativa",
+            (today - timedelta(days=30)).isoformat(),
+            (today + timedelta(days=365)).isoformat(),
+            "Cenário demonstrativo com cotação disponível.",
+        ),
+    )
+    conn.execute(
+        """
+        INSERT INTO orders
+        (id, numero, canal, cliente, cep_origem, cep_destino, cidade_destino, uf_destino, valor_pedido, peso_real_kg,
+         comprimento_cm, largura_cm, altura_cm, volumes, produtos, status, transportadora_selecionada_id,
+         modalidade_selecionada, frete_calculado, frete_cobrado, prazo_dias, status_protheus)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ON CONFLICT(id) DO UPDATE SET
+          numero = excluded.numero,
+          canal = excluded.canal,
+          cliente = excluded.cliente,
+          cep_origem = excluded.cep_origem,
+          cep_destino = excluded.cep_destino,
+          cidade_destino = excluded.cidade_destino,
+          uf_destino = excluded.uf_destino,
+          valor_pedido = excluded.valor_pedido,
+          peso_real_kg = excluded.peso_real_kg,
+          comprimento_cm = excluded.comprimento_cm,
+          largura_cm = excluded.largura_cm,
+          altura_cm = excluded.altura_cm,
+          volumes = excluded.volumes,
+          produtos = excluded.produtos,
+          status = excluded.status,
+          transportadora_selecionada_id = excluded.transportadora_selecionada_id,
+          modalidade_selecionada = excluded.modalidade_selecionada,
+          frete_calculado = excluded.frete_calculado,
+          frete_cobrado = excluded.frete_cobrado,
+          prazo_dias = excluded.prazo_dias,
+          status_protheus = excluded.status_protheus
+        """,
+        (
+            "p-demo-quote",
+            "SC-DEMO-FRETE",
+            "Mercado Livre",
+            "Cliente Demonstração",
+            "40010000",
+            "01310000",
+            "São Paulo",
+            "SP",
+            240,
+            10,
+            30,
+            20,
+            15,
+            1,
+            "Pedido demo para cotação positiva",
+            "Aguardando Cotacao",
+            "",
+            "",
+            0,
+            0,
+            0,
+            "Pendente",
+        ),
+    )
+
     if conn.execute("SELECT COUNT(*) FROM marketplace_premissas").fetchone()[0] == 0:
         conn.executemany(
             """
@@ -672,23 +788,40 @@ def seed_expanded_model(conn):
             ],
         )
 
-    if conn.execute("SELECT COUNT(*) FROM marketplace_skus").fetchone()[0] == 0:
-        conn.executemany(
-            """
-            INSERT INTO marketplace_skus
-            (id, sku, nome, canal, custo_produto_centavos, preco_venda_centavos, custo_embalagem_centavos,
-             frete_estimado_centavos, frete_gratis, peso_kg, comprimento_cm, largura_cm, altura_cm, fator_cubagem,
-             estoque, status)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            """,
-            [
-                ("sku-rent-1", "SC-KIT-001", "Kit organizador compacto", "MERCADO_LIVRE", money_to_cents(42), money_to_cents(89.9), money_to_cents(2.8), money_to_cents(19.9), 1, 0.8, 24, 18, 12, 300, 34, "ATIVO"),
-                ("sku-rent-2", "SC-CAIXA-012", "Caixa plastica alta cubagem", "MERCADO_LIVRE", money_to_cents(58), money_to_cents(109.9), money_to_cents(4.5), money_to_cents(38.5), 1, 1.2, 46, 36, 31, 300, 12, "ATIVO"),
-                ("sku-rent-3", "SC-UTIL-220", "Utensilio domestico leve", "SHOPEE", money_to_cents(18), money_to_cents(39.9), money_to_cents(1.5), money_to_cents(11.9), 0, 0.25, 18, 12, 8, 300, 80, "ATIVO"),
-                ("sku-rent-4", "SC-PRO-078", "Produto profissional medio", "SITE_PROPRIO", money_to_cents(120), money_to_cents(229.9), money_to_cents(5.5), money_to_cents(32.0), 1, 2.4, 34, 28, 20, 300, 9, "ATIVO"),
-                ("sku-rent-5", "SC-PROMO-010", "Produto promocional margem apertada", "SHOPEE", money_to_cents(31), money_to_cents(49.9), money_to_cents(2.2), money_to_cents(16.9), 1, 0.55, 22, 18, 15, 300, 45, "ATIVO"),
-            ],
-        )
+    demo_marketplace_skus = [
+        ("sku-rent-1", "SC-MARGEM-001", "Kit organizador rentável", "MERCADO_LIVRE", money_to_cents(28), money_to_cents(129.9), money_to_cents(2.5), money_to_cents(12.9), 1, 0.9, 10, 8, 4, 300, 34, "ATIVO"),
+        ("sku-rent-2", "SC-CAIXA-012", "Caixa plástica com risco de cubagem", "MERCADO_LIVRE", money_to_cents(58), money_to_cents(109.9), money_to_cents(4.5), money_to_cents(38.5), 1, 1.2, 46, 36, 31, 300, 12, "ATIVO"),
+        ("sku-rent-3", "SC-UTIL-220", "Utensílio doméstico com margem apertada", "SHOPEE", money_to_cents(18), money_to_cents(40.5), money_to_cents(1.5), money_to_cents(0), 0, 0.25, 6, 6, 2, 300, 80, "ATIVO"),
+        ("sku-rent-4", "SC-PRO-078", "Produto profissional com margem saudável", "SITE_PROPRIO", money_to_cents(120), money_to_cents(269.9), money_to_cents(5.5), money_to_cents(0), 0, 2.4, 10, 8, 6, 300, 9, "ATIVO"),
+        ("sku-rent-5", "SC-PROMO-010", "Produto promocional margem apertada", "SHOPEE", money_to_cents(31), money_to_cents(49.9), money_to_cents(2.2), money_to_cents(16.9), 1, 0.55, 22, 18, 15, 300, 45, "ATIVO"),
+    ]
+    conn.executemany(
+        """
+        INSERT INTO marketplace_skus
+        (id, sku, nome, canal, custo_produto_centavos, preco_venda_centavos, custo_embalagem_centavos,
+         frete_estimado_centavos, frete_gratis, peso_kg, comprimento_cm, largura_cm, altura_cm, fator_cubagem,
+         estoque, status)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ON CONFLICT(id) DO UPDATE SET
+          sku = excluded.sku,
+          canal = excluded.canal,
+          nome = excluded.nome,
+          custo_produto_centavos = excluded.custo_produto_centavos,
+          preco_venda_centavos = excluded.preco_venda_centavos,
+          custo_embalagem_centavos = excluded.custo_embalagem_centavos,
+          frete_estimado_centavos = excluded.frete_estimado_centavos,
+          frete_gratis = excluded.frete_gratis,
+          peso_kg = excluded.peso_kg,
+          comprimento_cm = excluded.comprimento_cm,
+          largura_cm = excluded.largura_cm,
+          altura_cm = excluded.altura_cm,
+          fator_cubagem = excluded.fator_cubagem,
+          estoque = excluded.estoque,
+          status = excluded.status,
+          atualizado_em = CURRENT_TIMESTAMP
+        """,
+        demo_marketplace_skus,
+    )
 
 
 def money_to_cents(value):

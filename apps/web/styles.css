@@ -20,6 +20,7 @@ body {
   background: var(--bg);
   color: var(--text);
   font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  overflow-x: hidden;
 }
 button, input, select { font: inherit; }
 button { cursor: pointer; }
@@ -595,19 +596,124 @@ th { background: #f8fafc; color: var(--muted); font-size: 12px; text-transform: 
   padding: 7px 8px;
 }
 .profitability-page { display: grid; gap: 16px; animation: dashboardIn .28s ease-out both; }
-.profitability-page .toolbar { justify-content: flex-end; }
+.profitability-header { display: grid; gap: 10px; }
+.profitability-actions { display: flex; gap: 10px; justify-content: flex-end; flex-wrap: wrap; }
+.feature-status {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  color: #40506b;
+  font-size: 12px;
+}
+.feature-status span {
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: #fff;
+  padding: 6px 10px;
+}
+.profitability-kpis { grid-template-columns: repeat(7, minmax(0, 1fr)); }
 .profitability-page .dashboard-metric { min-height: 84px; }
 .profitability-page .dashboard-metric span { max-width: 150px; }
-.profitability-page .table table { min-width: 1120px; }
-.profitability-page .table th {
-  color: #020817;
-  font-size: 12px;
-  font-weight: 800;
-  text-transform: none;
+.premise-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  margin: 12px 0;
 }
-.profitability-page .table td { font-size: 12px; vertical-align: middle; }
-.profitability-page .table td span { color: #40506b; font-size: 12px; }
-.profitability-page .table input.compact-input { background: #f8fafc; border-color: #d4deeb; border-radius: 6px; }
+.premise-card {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 12px;
+  background: #fbfcfe;
+}
+.premise-card > strong { grid-column: 1 / -1; color: #020817; }
+.premise-card label { text-transform: none; color: #334155; font-size: 11px; }
+.premise-card input.compact-input {
+  width: 100%;
+  min-width: 0;
+  background: #fff;
+  border-color: #d4deeb;
+  border-radius: 6px;
+}
+.profitability-card-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: 12px;
+}
+.profitability-card {
+  display: grid;
+  gap: 12px;
+  border: 1px solid var(--border);
+  border-left-width: 5px;
+  border-radius: 8px;
+  background: #fff;
+  padding: 14px;
+  box-shadow: var(--shadow);
+}
+.profitability-card.score-green { border-left-color: #168640; }
+.profitability-card.score-yellow { border-left-color: #f59e0b; }
+.profitability-card.score-red { border-left-color: #dc2626; }
+.profitability-card-head { display: flex; justify-content: space-between; gap: 12px; align-items: flex-start; }
+.profitability-card-head strong { display: block; color: #020817; font-size: 14px; }
+.profitability-card-head span { display: block; margin-top: 3px; color: #40506b; font-size: 12px; }
+.score-indicator {
+  width: 66px;
+  min-width: 66px;
+  height: 58px;
+  display: grid;
+  place-items: center;
+  border-radius: 8px;
+  font-weight: 800;
+}
+.score-indicator b { font-size: 19px; line-height: 1; }
+.score-indicator small { font-size: 10px; line-height: 1; }
+.score-indicator.score-green { background: #e8f7ef; color: #168640; }
+.score-indicator.score-yellow { background: #fff3df; color: #a15c00; }
+.score-indicator.score-red { background: #fee4e2; color: #b42318; }
+.profitability-meta { display: flex; gap: 8px; flex-wrap: wrap; color: #40506b; font-size: 12px; }
+.profitability-meta span {
+  border-radius: 999px;
+  background: #eef2f7;
+  padding: 4px 8px;
+}
+.profitability-values {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+}
+.profitability-values div {
+  border: 1px solid #e5ebf3;
+  border-radius: 6px;
+  padding: 9px;
+  background: #f8fafc;
+}
+.profitability-values span { display: block; color: #64748b; font-size: 11px; }
+.profitability-values strong { display: block; margin-top: 3px; color: #020817; font-size: 14px; }
+.profitability-values .positive { color: #168640; }
+.profitability-values .negative { color: #dc2626; }
+.profitability-alerts { display: flex; gap: 6px; flex-wrap: wrap; }
+.score-pill {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  padding: 5px 9px;
+  font-size: 11px;
+  font-weight: 800;
+}
+.score-pill.score-green { background: #e8f7ef; color: #168640; }
+.score-pill.score-yellow { background: #fff3df; color: #855300; }
+.score-pill.score-red { background: #dc2626; color: #fff; }
+.recommendation {
+  border-top: 1px solid var(--border);
+  padding-top: 10px;
+}
+.recommendation span { display: block; color: #64748b; font-size: 11px; font-weight: 800; text-transform: uppercase; }
+.recommendation strong { display: block; margin-top: 3px; color: #020817; font-size: 13px; line-height: 1.35; }
 .orders-page { display: grid; gap: 16px; animation: dashboardIn .28s ease-out both; }
 .orders-actions { display: flex; justify-content: flex-end; margin-top: -52px; min-height: 36px; pointer-events: none; }
 .orders-actions button { pointer-events: auto; }
@@ -947,8 +1053,13 @@ th { background: #f8fafc; color: var(--muted); font-size: 12px; text-transform: 
 .toast { position: fixed; right: 18px; bottom: 18px; background: #111827; color: #fff; padding: 12px 14px; border-radius: 8px; }
 @media (max-width: 900px) {
   .shell { grid-template-columns: 1fr; }
-  .side { min-height: auto; }
-  .shell:not(.nav-hidden) .page { display: none; }
+  .side { height: auto; min-height: auto; position: relative; }
+  .side nav { max-height: 54vh; }
+  .page .topbar { flex-wrap: wrap; min-height: auto; padding: 8px 12px; }
+  .topbar-brand { flex: 1 1 100%; min-width: 0; }
+  .user-menu { margin-left: auto; }
+  #app { padding: 14px 12px 18px; }
+  .page-heading { padding: 20px 12px 0; }
   .cols-3, .cols-4, .integration-form, .connector-grid, .settings-controls { grid-template-columns: 1fr; }
   .dashboard-metrics, .dashboard-grid { grid-template-columns: 1fr; }
   .dashboard-chart.wide { grid-column: auto; }
@@ -965,6 +1076,13 @@ th { background: #f8fafc; color: var(--muted); font-size: 12px; text-transform: 
   .modal-actions button { width: 100%; }
   .channel-grid { grid-template-columns: 1fr; }
   .channel-actions { flex-direction: column; align-items: stretch; }
+  .profitability-actions { justify-content: stretch; }
+  .profitability-actions button { flex: 1 1 150px; justify-content: center; }
+  .feature-status { justify-content: stretch; }
+  .feature-status span { width: 100%; border-radius: 8px; }
+  .profitability-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .premise-grid, .profitability-card-grid { grid-template-columns: 1fr; }
+  .profitability-values { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .bar-chart { grid-template-columns: 34px 1fr; }
   .topbar-brand { gap: 8px; }
   .mvp-pill { display: none; }

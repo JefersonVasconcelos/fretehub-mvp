@@ -42,7 +42,7 @@ class ProfitabilityEngineTest(unittest.TestCase):
         self.assertGreater(result["lucroEstimado"], 0)
         self.assertGreater(result["precoVenda"], result["precoMinimo"])
         self.assertGreaterEqual(result["score"], 75)
-        self.assertIn("Saudavel", result["alertas"])
+        self.assertIn("Saudável", result["alertas"])
 
     def test_flags_loss_and_cubic_risk(self):
         sku = {
@@ -63,7 +63,7 @@ class ProfitabilityEngineTest(unittest.TestCase):
         result = calculate_profitability(sku, self.premise)
 
         self.assertLess(result["lucroEstimado"], 0)
-        self.assertIn("Prejuizo estimado", result["alertas"])
+        self.assertIn("Prejuízo estimado", result["alertas"])
         self.assertIn("Risco por cubagem", result["alertas"])
         self.assertLess(result["score"], 30)
 

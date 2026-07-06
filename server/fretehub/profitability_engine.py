@@ -86,23 +86,23 @@ def profitability_score(margin, target_margin, profit, cubic_alert):
 def build_alerts(profit, margin, target_margin, cubic_alert, sku, freight_cost):
     alerts = []
     if profit < 0:
-        alerts.append("Prejuizo estimado")
+        alerts.append("Prejuízo estimado")
     if margin < target_margin:
         alerts.append("Margem abaixo da meta")
     if cubic_alert:
         alerts.append("Risco por cubagem")
     if sku.get("freteGratis") and freight_cost > money(sku.get("precoVenda")) * 0.25:
-        alerts.append("Frete gratis consome mais de 25% do preco")
-    return alerts or ["Saudavel"]
+        alerts.append("Frete grátis consome mais de 25% do preço")
+    return alerts or ["Saudável"]
 
 
 def recommended_action(profit, margin, target_margin, cubic_alert, price, minimum_price):
     if profit < 0:
-        return "Aumentar preco, remover frete gratis ou pausar SKU"
+        return "Aumentar preço, remover frete grátis ou pausar SKU"
     if cubic_alert:
         return "Revisar embalagem e testar caixa menor"
     if margin < target_margin:
-        return f"Reajustar preco para pelo menos R$ {minimum_price:.2f}"
+        return f"Reajustar preço para pelo menos R$ {minimum_price:.2f}"
     if price > minimum_price * 1.35:
         return "Manter margem e avaliar campanha controlada"
-    return "Manter preco e monitorar"
+    return "Manter preço e monitorar"

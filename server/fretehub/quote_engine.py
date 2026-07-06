@@ -8,14 +8,14 @@ def only_digits(value):
 def validate_quote_params(params):
     errors = []
     if not only_digits(params.get("cepOrigem")):
-        errors.append("CEP origem e obrigatorio.")
+        errors.append("CEP origem é obrigatório.")
     if not only_digits(params.get("cepDestino")):
-        errors.append("CEP destino e obrigatorio.")
+        errors.append("CEP destino é obrigatório.")
     if float(params.get("pesoRealKg") or 0) <= 0:
         errors.append("Peso real deve ser maior que zero.")
     for key in ("comprimentoCm", "larguraCm", "alturaCm"):
         if float(params.get(key) or 0) <= 0:
-            errors.append("Dimensoes devem ser maiores que zero.")
+            errors.append("Dimensões devem ser maiores que zero.")
             break
     if float(params.get("valorDeclarado") or 0) <= 0:
         errors.append("Valor declarado deve ser maior que zero.")
@@ -126,13 +126,13 @@ def _explain_no_rate(rates, params, peso, today):
     if all(r["vigenciaInicio"] > today or r["vigenciaFim"] < today for r in rates):
         return "Nenhuma tarifa vigente."
     if all(r["ufDestino"] != params["ufDestino"] for r in rates):
-        return "UF de destino nao atendida."
+        return "UF de destino não atendida."
     cep = int(only_digits(params.get("cepDestino")).ljust(8, "0"))
     if all(cep < int(r["cepInicio"]) or cep > int(r["cepFim"]) for r in rates):
-        return "CEP fora da area atendida."
+        return "CEP fora da área atendida."
     if all(peso < float(r["pesoInicioKg"]) or peso > float(r["pesoFimKg"]) for r in rates):
         return "Peso fora da faixa."
-    return "Nenhuma tarifa valida para esta combinacao."
+    return "Nenhuma tarifa válida para esta combinação."
 
 
 def _unavailable(carrier, peso_real, peso_cubado, peso_considerado, reason):
@@ -148,7 +148,7 @@ def _unavailable(carrier, peso_real, peso_cubado, peso_considerado, reason):
         "valorTaxas": 0,
         "prazoDias": 0,
         "disponivel": False,
-        "statusTarifa": "Indisponivel",
+        "statusTarifa": "Indisponível",
         "regrasAplicadas": [],
         "motivoIndisponibilidade": reason,
         "recomendada": False,
@@ -162,12 +162,12 @@ def _mark_recommended(options, priority):
         return
     if priority == "menor_prazo":
         best = min(available, key=lambda o: o["prazoDias"])
-        reason = "Menor prazo entre as opcoes disponiveis."
+        reason = "Menor prazo entre as opções disponíveis."
     elif priority == "equilibrio":
         best = min(available, key=lambda o: o["valorFrete"] * o["prazoDias"])
-        reason = "Melhor equilibrio entre custo e prazo."
+        reason = "Melhor equilíbrio entre custo e prazo."
     else:
         best = min(available, key=lambda o: o["valorFrete"])
-        reason = "Menor custo entre as opcoes disponiveis."
+        reason = "Menor custo entre as opções disponíveis."
     best["recomendada"] = True
     best["motivoRecomendacao"] = reason
