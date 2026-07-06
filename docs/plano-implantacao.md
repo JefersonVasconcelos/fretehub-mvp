@@ -16,6 +16,7 @@ O projeto possui:
 - Motor de cotacao.
 - Importacao XLSX.
 - Integracoes preparadas em modo demonstrativo.
+- Rentabilidade Marketplace com calculo de preco minimo, auditoria por SKU, importacao e exportacao CSV.
 - Testes automatizados parciais.
 - Documentacao em `docs/`.
 
@@ -192,6 +193,7 @@ Checklist:
 - Integracao Protheus.
 - Canais de venda.
 - Relatorios.
+- Rentabilidade Marketplace.
 - Auditoria.
 - Configuracoes.
 - Usuarios.
@@ -223,6 +225,9 @@ Atividades:
 - Perfis revisados.
 - Dados demo removidos ou separados.
 - Integracoes testadas em homologacao.
+- Premissas de marketplace revisadas com Financeiro/Comercial.
+- Importacao e exportacao de SKUs de rentabilidade validadas.
+- Snapshots de rentabilidade visiveis na auditoria.
 - Plano de rollback definido.
 
 ## Plano de rollback
@@ -245,6 +250,8 @@ Monitorar:
 - Tempo de resposta.
 - Falhas de importacao.
 - Falhas de integracao.
+- Auditorias de rentabilidade com prejuizo.
+- Alteracoes de premissas comerciais.
 - Uso do banco.
 - Logs de auditoria.
 
@@ -256,6 +263,7 @@ Monitorar:
 - Banco persistente.
 - Documentacao atualizada.
 - Testes principais funcionando.
+- Validacao do modulo Rentabilidade Marketplace com SKUs reais de baixo risco.
 
 ### Medio prazo
 

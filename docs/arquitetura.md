@@ -48,7 +48,8 @@ flowchart TD
   B --> D["Motor de Cotacao"]
   B --> E["Importacao XLSX"]
   B --> F["Integracoes"]
-  B --> G["Banco SQLite"]
+  B --> G["Motor de Rentabilidade"]
+  B --> H["Banco SQLite"]
 ```
 
 ## Frontend
@@ -74,6 +75,7 @@ Responsabilidades:
 - Auditoria.
 - Configuracoes.
 - Usuarios.
+- Rentabilidade Marketplace.
 
 Caracteristicas:
 
@@ -143,6 +145,16 @@ Responsavel por:
 - Encontrar tarifas validas.
 - Calcular valor do frete.
 - Marcar opcao recomendada.
+
+### `profitability_engine.py`
+
+Responsavel por:
+
+- Calcular preco minimo por marketplace.
+- Calcular lucro estimado e margem por SKU.
+- Gerar score de rentabilidade.
+- Detectar risco de prejuizo e cubagem.
+- Retornar acao recomendada para decisao comercial.
 
 ### `xlsx_importer.py`
 
@@ -223,6 +235,28 @@ sequenceDiagram
   A->>F: Retorna resultado
 ```
 
+## Fluxo de rentabilidade marketplace
+
+```mermaid
+sequenceDiagram
+  participant U as Usuario
+  participant F as Frontend
+  participant A as API
+  participant M as Motor de Rentabilidade
+  participant B as Banco
+
+  U->>F: Importa SKUs ou ajusta premissas
+  F->>A: POST /api/profitability/import ou /premises/save
+  A->>B: Salva dados e registra auditoria
+  U->>F: Solicita auditoria de margem
+  F->>A: POST /api/profitability/audit
+  A->>B: Carrega SKUs e premissas
+  A->>M: Calcula score, preco minimo e alertas
+  M->>A: Retorna resultado por SKU
+  A->>B: Salva snapshot auditavel
+  A->>F: Retorna resultado e permite exportar CSV
+```
+
 ## Ambientes recomendados
 
 ### Local
@@ -290,6 +324,7 @@ flowchart TD
 - Banco inicial funcionando.
 - Autenticacao e permissoes.
 - Motor de cotacao separado.
+- Motor de rentabilidade separado.
 - Testes automatizados para partes criticas.
 - Modelo de dados ja preparado para operacao mais completa.
 - Telas aderentes ao fluxo real de frete.
@@ -304,6 +339,7 @@ flowchart TD
 | Sem fila real | Integracoes frageis | Criar fila/reprocessamento |
 | Sem CI/CD | Deploy manual arriscado | Criar pipeline no GitHub |
 | Sem observabilidade | Erros dificeis de diagnosticar | Adicionar logs estruturados |
+| Premissas comerciais desatualizadas | Decisoes de margem incorretas | Revisar premissas por marketplace periodicamente |
 
 ## Recomendacao tecnica
 

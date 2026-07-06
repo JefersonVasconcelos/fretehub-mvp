@@ -25,6 +25,7 @@ A V2 deve ser tratada como a base operacional do produto. Ela preserva a V1 como
 - Relatorios.
 - Auditoria.
 - Configuracoes operacionais.
+- Rentabilidade Marketplace.
 
 ### Fora do escopo imediato
 
@@ -279,6 +280,23 @@ Regras minimas:
 - Bloqueio de tarifas vencidas em simulacoes.
 - Limite percentual de frete sobre valor do pedido.
 
+### RF14 - Rentabilidade Marketplace
+
+O sistema deve auditar a rentabilidade de produtos vendidos em Mercado Livre, Shopee e loja propria, considerando preco, custo, comissao, imposto, embalagem, frete gratis, parcelamento, ads e risco por cubagem.
+
+Regras:
+
+- Calcular preco minimo por marketplace.
+- Calcular lucro estimado e margem por SKU.
+- Gerar score de rentabilidade por SKU.
+- Alertar prejuizo, margem abaixo da meta e risco por cubagem.
+- Sugerir acao recomendada para cada SKU.
+- Permitir importar SKUs por CSV.
+- Permitir exportar o resultado da auditoria em CSV.
+- Permitir baixar modelo CSV.
+- Permitir editar e salvar premissas por canal.
+- Registrar auditoria ao importar SKUs, salvar premissas e auditar margens.
+
 ## Requisitos nao funcionais
 
 ### RNF01 - Usabilidade
@@ -332,6 +350,9 @@ SQLite atende MVP local. Para uso real multiusuario, a recomendacao e migrar par
 - Exclusao de usuario deve ser logica.
 - Integracoes devem registrar sucesso, falha e mensagem.
 - Pedido deve manter status operacional, Protheus e expedicao.
+- Auditoria de rentabilidade deve ser rastreavel por usuario, data, SKU, canal e premissa aplicada.
+- Preco minimo deve considerar custos fixos, custos variaveis e margem alvo configurada.
+- Alerta de cubagem deve comparar peso cubado com peso real e orientar revisao de embalagem.
 
 ## Critérios de pronto para producao
 

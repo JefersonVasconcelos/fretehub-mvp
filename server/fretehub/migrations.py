@@ -280,6 +280,60 @@ MIGRATIONS = [
         );
         CREATE INDEX IF NOT EXISTS idx_historico_status_pedido ON historico_status_pedido(pedido_id, tipo_status, criado_em);
         """,
+    ),
+    (
+        "20260705_001_rentabilidade_marketplace",
+        """
+        CREATE TABLE IF NOT EXISTS marketplace_premissas (
+          id TEXT PRIMARY KEY,
+          codigo TEXT NOT NULL UNIQUE,
+          nome TEXT NOT NULL,
+          comissao_percentual TEXT NOT NULL DEFAULT '0',
+          taxa_fixa_centavos INTEGER NOT NULL DEFAULT 0 CHECK (taxa_fixa_centavos >= 0),
+          imposto_percentual TEXT NOT NULL DEFAULT '0',
+          ads_percentual TEXT NOT NULL DEFAULT '0',
+          parcelamento_percentual TEXT NOT NULL DEFAULT '0',
+          frete_gratis_minimo_centavos INTEGER NOT NULL DEFAULT 0 CHECK (frete_gratis_minimo_centavos >= 0),
+          margem_alvo_percentual TEXT NOT NULL DEFAULT '0.15',
+          ativo INTEGER NOT NULL DEFAULT 1 CHECK (ativo IN (0, 1)),
+          atualizado_em TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+        );
+
+        CREATE TABLE IF NOT EXISTS marketplace_skus (
+          id TEXT PRIMARY KEY,
+          sku TEXT NOT NULL,
+          nome TEXT NOT NULL,
+          canal TEXT NOT NULL,
+          custo_produto_centavos INTEGER NOT NULL DEFAULT 0 CHECK (custo_produto_centavos >= 0),
+          preco_venda_centavos INTEGER NOT NULL DEFAULT 0 CHECK (preco_venda_centavos >= 0),
+          custo_embalagem_centavos INTEGER NOT NULL DEFAULT 0 CHECK (custo_embalagem_centavos >= 0),
+          imposto_percentual TEXT,
+          comissao_percentual TEXT,
+          ads_percentual TEXT,
+          parcelamento_percentual TEXT,
+          frete_estimado_centavos INTEGER NOT NULL DEFAULT 0 CHECK (frete_estimado_centavos >= 0),
+          frete_gratis INTEGER NOT NULL DEFAULT 0 CHECK (frete_gratis IN (0, 1)),
+          peso_kg REAL NOT NULL DEFAULT 0 CHECK (peso_kg >= 0),
+          comprimento_cm REAL NOT NULL DEFAULT 0 CHECK (comprimento_cm >= 0),
+          largura_cm REAL NOT NULL DEFAULT 0 CHECK (largura_cm >= 0),
+          altura_cm REAL NOT NULL DEFAULT 0 CHECK (altura_cm >= 0),
+          fator_cubagem REAL NOT NULL DEFAULT 300 CHECK (fator_cubagem > 0),
+          estoque INTEGER NOT NULL DEFAULT 0 CHECK (estoque >= 0),
+          status TEXT NOT NULL DEFAULT 'ATIVO',
+          atualizado_em TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          UNIQUE (sku, canal)
+        );
+        CREATE INDEX IF NOT EXISTS idx_marketplace_skus_canal ON marketplace_skus(canal, status);
+
+        CREATE TABLE IF NOT EXISTS rentabilidade_snapshots (
+          id TEXT PRIMARY KEY,
+          sku_id TEXT NOT NULL REFERENCES marketplace_skus(id),
+          usuario_id TEXT REFERENCES users(id),
+          resultado_json TEXT NOT NULL,
+          criado_em TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+        );
+        CREATE INDEX IF NOT EXISTS idx_rentabilidade_snapshots_sku ON rentabilidade_snapshots(sku_id, criado_em);
+        """,
     )
 ]
 
@@ -602,6 +656,39 @@ def seed_expanded_model(conn):
                 """,
                 (f"hist-{order['id']}", order["id"], "PEDIDO", None, order["status"], "Seed inicial V2", "u1", "SISTEMA"),
             )
+
+    if conn.execute("SELECT COUNT(*) FROM marketplace_premissas").fetchone()[0] == 0:
+        conn.executemany(
+            """
+            INSERT INTO marketplace_premissas
+            (id, codigo, nome, comissao_percentual, taxa_fixa_centavos, imposto_percentual, ads_percentual,
+             parcelamento_percentual, frete_gratis_minimo_centavos, margem_alvo_percentual)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            [
+                ("prem-ml", "MERCADO_LIVRE", "Mercado Livre", "0.16", money_to_cents(6.0), "0.08", "0.04", "0.02", money_to_cents(79), "0.15"),
+                ("prem-shopee", "SHOPEE", "Shopee", "0.14", money_to_cents(4.0), "0.08", "0.05", "0.015", money_to_cents(39), "0.15"),
+                ("prem-site", "SITE_PROPRIO", "Loja Propria", "0.04", money_to_cents(1.5), "0.08", "0.03", "0.0", money_to_cents(199), "0.18"),
+            ],
+        )
+
+    if conn.execute("SELECT COUNT(*) FROM marketplace_skus").fetchone()[0] == 0:
+        conn.executemany(
+            """
+            INSERT INTO marketplace_skus
+            (id, sku, nome, canal, custo_produto_centavos, preco_venda_centavos, custo_embalagem_centavos,
+             frete_estimado_centavos, frete_gratis, peso_kg, comprimento_cm, largura_cm, altura_cm, fator_cubagem,
+             estoque, status)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            [
+                ("sku-rent-1", "SC-KIT-001", "Kit organizador compacto", "MERCADO_LIVRE", money_to_cents(42), money_to_cents(89.9), money_to_cents(2.8), money_to_cents(19.9), 1, 0.8, 24, 18, 12, 300, 34, "ATIVO"),
+                ("sku-rent-2", "SC-CAIXA-012", "Caixa plastica alta cubagem", "MERCADO_LIVRE", money_to_cents(58), money_to_cents(109.9), money_to_cents(4.5), money_to_cents(38.5), 1, 1.2, 46, 36, 31, 300, 12, "ATIVO"),
+                ("sku-rent-3", "SC-UTIL-220", "Utensilio domestico leve", "SHOPEE", money_to_cents(18), money_to_cents(39.9), money_to_cents(1.5), money_to_cents(11.9), 0, 0.25, 18, 12, 8, 300, 80, "ATIVO"),
+                ("sku-rent-4", "SC-PRO-078", "Produto profissional medio", "SITE_PROPRIO", money_to_cents(120), money_to_cents(229.9), money_to_cents(5.5), money_to_cents(32.0), 1, 2.4, 34, 28, 20, 300, 9, "ATIVO"),
+                ("sku-rent-5", "SC-PROMO-010", "Produto promocional margem apertada", "SHOPEE", money_to_cents(31), money_to_cents(49.9), money_to_cents(2.2), money_to_cents(16.9), 1, 0.55, 22, 18, 15, 300, 45, "ATIVO"),
+            ],
+        )
 
 
 def money_to_cents(value):

@@ -10,6 +10,7 @@ ROLE_PERMISSIONS = {
         "integration:read",
         "audit:read",
         "import:create",
+        "cost:read",
     },
     "Operador de Frete": {
         "read",
@@ -18,6 +19,7 @@ ROLE_PERMISSIONS = {
         "tariff:read",
         "carrier:read",
         "import:create",
+        "cost:read",
     },
     "Financeiro": {"read", "cost:read", "audit:read"},
     "Consulta": {"read"},

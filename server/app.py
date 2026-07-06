@@ -13,6 +13,7 @@ from fretehub.database import connect, init_db, row, rows
 from fretehub.integrations import integration_status
 from fretehub.migrations import cents_to_money
 from fretehub.permissions import can, permissions_for
+from fretehub.profitability_engine import calculate_profitability
 from fretehub.quote_engine import calculate_quote
 from fretehub.xlsx_importer import import_orders, import_rates, read_xlsx_base64
 
@@ -65,6 +66,8 @@ class Handler(SimpleHTTPRequestHandler):
             "/api/import-lines": lambda: self.read_endpoint(user, "read", lambda: self.json(rows("SELECT * FROM linhas_importacao ORDER BY importacao_id, numero_linha"))),
             "/api/integration-logs": lambda: self.read_endpoint(user, "integration:read", lambda: self.json(rows("SELECT * FROM logs_integracao ORDER BY criado_em DESC LIMIT 100"))),
             "/api/order-history": lambda: self.read_endpoint(user, "read", lambda: self.json(rows("SELECT * FROM historico_status_pedido ORDER BY criado_em DESC LIMIT 100"))),
+            "/api/profitability/skus": lambda: self.read_endpoint(user, "cost:read", self.profitability_skus),
+            "/api/profitability/premises": lambda: self.read_endpoint(user, "cost:read", lambda: self.json([map_profitability_premise(p) for p in rows("SELECT * FROM marketplace_premissas ORDER BY nome")])),
         }
         handler = routes.get(path)
         if not handler:
@@ -139,6 +142,18 @@ class Handler(SimpleHTTPRequestHandler):
             carrier_id, action = parts[2], parts[3]
             if action == "update":
                 return self.update_carrier(user, carrier_id)
+        if path == "/api/profitability/audit":
+            if not can(user, "cost:read"):
+                return self.error(403, "Perfil sem permissao para auditar rentabilidade.")
+            return self.audit_profitability(user)
+        if path == "/api/profitability/import":
+            if not can(user, "import:create"):
+                return self.error(403, "Perfil sem permissao para importar SKUs.")
+            return self.import_profitability_skus(user)
+        if path == "/api/profitability/premises/save":
+            if not can(user, "cost:read"):
+                return self.error(403, "Perfil sem permissao para salvar premissas.")
+            return self.save_profitability_premises(user)
         return self.error(404, "Endpoint nao encontrado.")
 
     def do_DELETE(self):
@@ -242,6 +257,134 @@ class Handler(SimpleHTTPRequestHandler):
         combined = mapped + [item for item in demo_logs if (item["data"], item["canal"], item["mensagem"]) not in existing]
         combined.sort(key=lambda item: item["data"], reverse=True)
         return self.json(combined[:3])
+
+    def profitability_skus(self):
+        premises = {p["codigo"]: map_profitability_premise(p) for p in rows("SELECT * FROM marketplace_premissas")}
+        result = []
+        for item in rows("SELECT * FROM marketplace_skus ORDER BY canal, sku"):
+            sku = map_profitability_sku(item)
+            sku["resultado"] = calculate_profitability(sku, premises.get(sku["canal"]) or {})
+            result.append(sku)
+        return self.json(result)
+
+    def audit_profitability(self, user):
+        premises = {p["codigo"]: map_profitability_premise(p) for p in rows("SELECT * FROM marketplace_premissas")}
+        audited = []
+        with connect() as conn:
+            for item in conn.execute("SELECT * FROM marketplace_skus ORDER BY canal, sku").fetchall():
+                sku = map_profitability_sku(dict(item))
+                premise = premises.get(sku["canal"]) or {}
+                result = calculate_profitability(sku, premise)
+                audited.append({**sku, "resultado": result})
+                conn.execute(
+                    "INSERT INTO rentabilidade_snapshots (id, sku_id, usuario_id, resultado_json) VALUES (?, ?, ?, ?)",
+                    (f"rent-{uuid.uuid4().hex[:12]}", sku["id"], user["id"], json.dumps({"premissa": premise, "resultado": result}, ensure_ascii=False)),
+                )
+            conn.execute(
+                "INSERT INTO audits (id, usuario_id, usuario_nome, acao, entidade, entidade_id, detalhe) VALUES (?, ?, ?, ?, ?, ?, ?)",
+                (f"a-{uuid.uuid4().hex[:12]}", user["id"], user["nome"], "AUDITOU_RENTABILIDADE", "Rentabilidade", "marketplace", f"Auditou margem de {len(audited)} SKU(s)."),
+            )
+        return self.json({"items": audited, "total": len(audited)})
+
+    def import_profitability_skus(self, user):
+        records = self.body_json().get("rows") or []
+        imported = 0
+        errors = []
+        with connect() as conn:
+            for index, record in enumerate(records, start=2):
+                sku_code = str(record.get("sku") or "").strip()
+                name = str(record.get("nome") or "").strip()
+                channel = normalize_channel(record.get("canal"))
+                if not sku_code or not name or not channel:
+                    errors.append({"linha": index, "erro": "Campos obrigatorios: sku, nome e canal."})
+                    continue
+                existing = conn.execute("SELECT id FROM marketplace_skus WHERE sku = ? AND canal = ?", (sku_code, channel)).fetchone()
+                item_id = existing["id"] if existing else f"sku-{uuid.uuid4().hex[:10]}"
+                conn.execute(
+                    """
+                    INSERT INTO marketplace_skus
+                    (id, sku, nome, canal, custo_produto_centavos, preco_venda_centavos, custo_embalagem_centavos,
+                     frete_estimado_centavos, frete_gratis, peso_kg, comprimento_cm, largura_cm, altura_cm, fator_cubagem,
+                     estoque, status, atualizado_em)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+                    ON CONFLICT(sku, canal) DO UPDATE SET
+                      nome = excluded.nome,
+                      custo_produto_centavos = excluded.custo_produto_centavos,
+                      preco_venda_centavos = excluded.preco_venda_centavos,
+                      custo_embalagem_centavos = excluded.custo_embalagem_centavos,
+                      frete_estimado_centavos = excluded.frete_estimado_centavos,
+                      frete_gratis = excluded.frete_gratis,
+                      peso_kg = excluded.peso_kg,
+                      comprimento_cm = excluded.comprimento_cm,
+                      largura_cm = excluded.largura_cm,
+                      altura_cm = excluded.altura_cm,
+                      fator_cubagem = excluded.fator_cubagem,
+                      estoque = excluded.estoque,
+                      status = excluded.status,
+                      atualizado_em = CURRENT_TIMESTAMP
+                    """,
+                    (
+                        item_id,
+                        sku_code,
+                        name,
+                        channel,
+                        api_money_to_cents(record.get("custoProduto")),
+                        api_money_to_cents(record.get("precoVenda")),
+                        api_money_to_cents(record.get("custoEmbalagem")),
+                        api_money_to_cents(record.get("freteEstimado")),
+                        1 if str(record.get("freteGratis") or "").lower() in {"1", "sim", "true", "s"} else 0,
+                        api_float(record.get("pesoKg")),
+                        api_float(record.get("comprimentoCm")),
+                        api_float(record.get("larguraCm")),
+                        api_float(record.get("alturaCm")),
+                        api_float(record.get("fatorCubagem"), 300) or 300,
+                        int(api_float(record.get("estoque"), 0)),
+                        str(record.get("status") or "ATIVO"),
+                    ),
+                )
+                imported += 1
+            conn.execute(
+                "INSERT INTO audits (id, usuario_id, usuario_nome, acao, entidade, entidade_id, detalhe) VALUES (?, ?, ?, ?, ?, ?, ?)",
+                (f"a-{uuid.uuid4().hex[:12]}", user["id"], user["nome"], "IMPORTOU_SKUS_RENTABILIDADE", "Rentabilidade", "marketplace", f"Importou {imported} SKU(s), {len(errors)} erro(s)."),
+            )
+        return self.json({"imported": imported, "errors": errors})
+
+    def save_profitability_premises(self, user):
+        premises = self.body_json().get("premises") or []
+        with connect() as conn:
+            for item in premises:
+                code = normalize_channel(item.get("codigo"))
+                if not code:
+                    continue
+                conn.execute(
+                    """
+                    UPDATE marketplace_premissas
+                    SET comissao_percentual = ?,
+                        taxa_fixa_centavos = ?,
+                        imposto_percentual = ?,
+                        ads_percentual = ?,
+                        parcelamento_percentual = ?,
+                        frete_gratis_minimo_centavos = ?,
+                        margem_alvo_percentual = ?,
+                        atualizado_em = CURRENT_TIMESTAMP
+                    WHERE codigo = ?
+                    """,
+                    (
+                        api_percent_text(item.get("comissaoPercentual")),
+                        api_money_to_cents(item.get("taxaFixa")),
+                        api_percent_text(item.get("impostoPercentual")),
+                        api_percent_text(item.get("adsPercentual")),
+                        api_percent_text(item.get("parcelamentoPercentual")),
+                        api_money_to_cents(item.get("freteGratisMinimo")),
+                        api_percent_text(item.get("margemAlvoPercentual")),
+                        code,
+                    ),
+                )
+            conn.execute(
+                "INSERT INTO audits (id, usuario_id, usuario_nome, acao, entidade, entidade_id, detalhe) VALUES (?, ?, ?, ?, ?, ?, ?)",
+                (f"a-{uuid.uuid4().hex[:12]}", user["id"], user["nome"], "SALVOU_PREMISSAS_RENTABILIDADE", "Rentabilidade", "marketplace", "Atualizou premissas de marketplace."),
+            )
+        return self.json({"ok": True})
 
     def test_integration(self):
         data = self.body_json()
@@ -1013,6 +1156,90 @@ def map_tariff_rule(row_data):
         if key in data:
             data[key.replace("_centavos", "")] = cents_to_money(data[key])
     return data
+
+
+def map_profitability_premise(row_data):
+    return {
+        "id": row_data["id"],
+        "codigo": row_data["codigo"],
+        "nome": row_data["nome"],
+        "comissaoPercentual": percent_to_display(row_data["comissao_percentual"]),
+        "taxaFixa": cents_to_money(row_data["taxa_fixa_centavos"]),
+        "impostoPercentual": percent_to_display(row_data["imposto_percentual"]),
+        "adsPercentual": percent_to_display(row_data["ads_percentual"]),
+        "parcelamentoPercentual": percent_to_display(row_data["parcelamento_percentual"]),
+        "freteGratisMinimo": cents_to_money(row_data["frete_gratis_minimo_centavos"]),
+        "margemAlvoPercentual": percent_to_display(row_data["margem_alvo_percentual"]),
+        "ativo": bool(row_data["ativo"]),
+        "atualizadoEm": row_data["atualizado_em"],
+    }
+
+
+def map_profitability_sku(row_data):
+    return {
+        "id": row_data["id"],
+        "sku": row_data["sku"],
+        "nome": row_data["nome"],
+        "canal": row_data["canal"],
+        "custoProduto": cents_to_money(row_data["custo_produto_centavos"]),
+        "precoVenda": cents_to_money(row_data["preco_venda_centavos"]),
+        "custoEmbalagem": cents_to_money(row_data["custo_embalagem_centavos"]),
+        "impostoPercentual": percent_optional_to_display(row_data.get("imposto_percentual")),
+        "comissaoPercentual": percent_optional_to_display(row_data.get("comissao_percentual")),
+        "adsPercentual": percent_optional_to_display(row_data.get("ads_percentual")),
+        "parcelamentoPercentual": percent_optional_to_display(row_data.get("parcelamento_percentual")),
+        "freteEstimado": cents_to_money(row_data["frete_estimado_centavos"]),
+        "freteGratis": bool(row_data["frete_gratis"]),
+        "pesoKg": row_data["peso_kg"],
+        "comprimentoCm": row_data["comprimento_cm"],
+        "larguraCm": row_data["largura_cm"],
+        "alturaCm": row_data["altura_cm"],
+        "fatorCubagem": row_data["fator_cubagem"],
+        "estoque": row_data["estoque"],
+        "status": row_data["status"],
+        "atualizadoEm": row_data["atualizado_em"],
+    }
+
+
+def api_float(value, fallback=0):
+    try:
+        return float(str(value).replace(",", "."))
+    except (TypeError, ValueError):
+        return fallback
+
+
+def api_money_to_cents(value):
+    return int(round(max(0, api_float(value)) * 100))
+
+
+def api_percent_text(value):
+    parsed = api_float(value)
+    if parsed > 1:
+        parsed = parsed / 100
+    return str(round(max(0, parsed), 4))
+
+
+def percent_to_display(value):
+    return round(api_float(value) * 100, 2)
+
+
+def percent_optional_to_display(value):
+    return "" if value in (None, "") else percent_to_display(value)
+
+
+def normalize_channel(value):
+    raw = str(value or "").strip().upper().replace(" ", "_").replace("-", "_")
+    aliases = {
+        "ML": "MERCADO_LIVRE",
+        "MERCADOLIVRE": "MERCADO_LIVRE",
+        "MERCADO_LIVRE": "MERCADO_LIVRE",
+        "SHOPEE": "SHOPEE",
+        "SITE": "SITE_PROPRIO",
+        "LOJA": "SITE_PROPRIO",
+        "LOJA_PROPRIA": "SITE_PROPRIO",
+        "SITE_PROPRIO": "SITE_PROPRIO",
+    }
+    return aliases.get(raw)
 
 
 if __name__ == "__main__":

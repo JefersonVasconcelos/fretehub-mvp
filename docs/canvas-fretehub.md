@@ -16,6 +16,7 @@ Empresas com volume de pedidos em diferentes canais costumam enfrentar:
 - Dificuldade de saber se o frete cobrado esta correto.
 - Falhas de integracao sem rastreabilidade.
 - Falta de relatorios por transportadora, canal e regiao.
+- Dificuldade de saber se o SKU vendido no marketplace continua rentavel depois de frete, comissao, imposto e cubagem.
 - Dependencia de planilhas.
 
 ## Publico-alvo inicial
@@ -55,6 +56,7 @@ Beneficios:
 - Gera relatorios de custo.
 - Registra auditoria.
 - Prepara integracao com ERP e marketplaces.
+- Mostra quais SKUs vendem com margem saudavel, margem apertada ou risco de prejuizo.
 
 ## Diferenciais
 
@@ -63,6 +65,8 @@ Beneficios:
 - Controle de tarifa por vigencia.
 - Tela de Protheus.
 - Canais de venda integraveis.
+- Rentabilidade Marketplace por SKU e canal.
+- Alertas de prejuizo, frete gratis e cubagem.
 - Auditoria operacional.
 - V1 demonstrativa preservada e V2 evolutiva.
 - Base simples para implantacao em empresas pequenas.
@@ -117,6 +121,7 @@ Prioridade alta:
 - Simulador de frete.
 - Transportadoras.
 - Tarifas.
+- Rentabilidade Marketplace.
 - Relatorios.
 - Usuarios.
 
@@ -134,6 +139,7 @@ Prioridade futura:
 - Rastreamento.
 - Conciliacao de frete cobrado.
 - Regras avancadas por contrato.
+- Recomendacao automatica de kits, embalagens e campanhas por SKU.
 - BI e previsao de custo.
 
 ## Indicadores de sucesso
@@ -154,6 +160,9 @@ Financeiros:
 - Custo por canal.
 - Divergencia entre frete calculado e cobrado.
 - Percentual de frete sobre valor do pedido.
+- SKUs com prejuizo estimado.
+- Score medio de rentabilidade.
+- Preco minimo por canal.
 
 Produto:
 
@@ -180,6 +189,7 @@ Entregas:
 - Tarifas.
 - Relatorios.
 - Usuarios.
+- Rentabilidade Marketplace com importacao, exportacao e auditoria.
 
 ### Fase 2 - Homologacao
 
@@ -241,6 +251,6 @@ FreteHub deve ser posicionado como uma solucao simples e pratica para empresas q
 Mensagem principal:
 
 ```text
-Controle seus fretes, compare transportadoras e reduza erros operacionais em uma unica plataforma.
+Controle seus fretes, compare transportadoras e proteja sua margem por pedido, canal e SKU em uma unica plataforma.
 ```
 

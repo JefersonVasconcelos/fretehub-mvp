@@ -239,6 +239,55 @@ Melhorias recomendadas:
 - Criar controle de webhook.
 - Guardar correlation ID por evento.
 
+### Rentabilidade Marketplace
+
+Tabelas:
+
+- `marketplace_premissas`
+- `marketplace_skus`
+- `rentabilidade_snapshots`
+
+Finalidade:
+
+- Controlar premissas comerciais por canal.
+- Armazenar SKUs auditados por marketplace.
+- Registrar snapshots de calculo para rastreabilidade.
+
+Dados principais:
+
+- Canal.
+- SKU.
+- Nome do produto.
+- Custo do produto.
+- Preco de venda.
+- Custo de embalagem.
+- Frete estimado.
+- Frete gratis.
+- Peso real.
+- Dimensoes.
+- Fator de cubagem.
+- Comissao.
+- Imposto.
+- Ads.
+- Parcelamento.
+- Margem alvo.
+- Resultado da auditoria.
+
+Regras:
+
+- SKU deve ser unico por canal.
+- Premissas devem ser versionaveis na evolucao de producao.
+- Auditoria deve guardar snapshot do resultado e da premissa aplicada, nao apenas o valor atual.
+- Importacao deve validar SKU, nome, canal, custo e preco.
+- Exportacao deve permitir conferencia externa em planilha.
+
+Melhorias recomendadas:
+
+- Vincular SKU aos itens reais do pedido.
+- Criar historico de premissas por periodo.
+- Integrar com custo real do ERP.
+- Integrar com APIs de marketplaces para comissao e frete atualizado.
+
 ### Importacoes
 
 Tabelas:
@@ -306,6 +355,8 @@ erDiagram
 
   INTEGRACOES ||--o{ LOGS_INTEGRACAO : registra
   IMPORTACOES ||--o{ LINHAS_IMPORTACAO : detalha
+  MARKETPLACE_PREMISSAS ||--o{ MARKETPLACE_SKUS : parametriza
+  MARKETPLACE_SKUS ||--o{ RENTABILIDADE_SNAPSHOTS : audita
 ```
 
 ## Governanca de dados
@@ -316,6 +367,7 @@ Dados sensiveis:
 - Nome de cliente.
 - Credenciais de integracao.
 - Dados operacionais de pedido.
+- Custos, margens e premissas comerciais por SKU.
 
 Cuidados necessarios:
 

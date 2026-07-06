@@ -1,6 +1,6 @@
 const API = location.origin;
 let token = localStorage.getItem("fretehub-v2-token") || "";
-let state = { orders: [], carriers: [], rates: [], integrations: [], channels: [], user: null };
+let state = { orders: [], carriers: [], rates: [], integrations: [], channels: [], profitabilitySkus: [], profitabilityPremises: [], user: null };
 let demoRole = localStorage.getItem("fretehub-v2-demo-role") || "";
 
 const $ = (id) => document.getElementById(id);
@@ -123,7 +123,7 @@ async function loadBase() {
     request("/api/integrations"),
     request("/api/channels"),
   ]);
-  state = { orders, carriers, rates, integrations, channels, user: me };
+  state = { orders, carriers, rates, integrations, channels, profitabilitySkus: [], profitabilityPremises: [], user: me };
   if (!demoRole) demoRole = me.perfis?.[0] || me.perfil || "";
   updateUserMenu();
 }
@@ -604,6 +604,183 @@ function renderImport() {
     $("importResult").innerHTML = `<section class="card"><strong>Importados: ${result.imported}</strong><pre>${JSON.stringify(result.errors, null, 2)}</pre></section>`;
     await loadBase();
   };
+}
+
+async function renderProfitability() {
+  setActive("profitability");
+  setTitle("Rentabilidade Marketplace", "Preço mínimo, margem, frete grátis e risco por cubagem por SKU.");
+  const [skus, premises] = await Promise.all([
+    request("/api/profitability/skus"),
+    request("/api/profitability/premises"),
+  ]);
+  state.profitabilitySkus = skus;
+  state.profitabilityPremises = premises;
+  const negative = skus.filter((item) => item.resultado.lucroEstimado < 0).length;
+  const cubic = skus.filter((item) => item.resultado.alertas.includes("Risco por cubagem")).length;
+  const avgScore = Math.round(skus.reduce((total, item) => total + Number(item.resultado.score || 0), 0) / Math.max(skus.length, 1));
+  $("app").innerHTML = `<section class="profitability-page">
+    <div class="toolbar">
+      <div>
+        <button class="primary" id="auditProfitability" type="button">Auditar margens</button>
+        <button class="secondary" id="exportProfitability" type="button">Exportar CSV</button>
+        <button class="secondary" id="downloadProfitabilityModel" type="button">Modelo CSV</button>
+        <button class="secondary" id="importProfitabilityButton" type="button">Importar CSV</button>
+        <input id="importProfitabilityFile" class="hidden" type="file" accept=".csv,text/csv">
+      </div>
+    </div>
+    <div class="dashboard-metrics">
+      ${dashboardMetric("SKUs auditados", skus.length, "cube", "blue")}
+      ${dashboardMetric("Com prejuizo", negative, "alert", "red")}
+      ${dashboardMetric("Alerta cubagem", cubic, "truck", "orange")}
+      ${dashboardMetric("Score medio", avgScore, "trend", "green")}
+    </div>
+    <section class="card">
+      <h3>Premissas por canal</h3>
+      <div class="table"><table><thead><tr><th>Canal</th><th>Comissão %</th><th>Taxa fixa</th><th>Imposto %</th><th>Ads %</th><th>Parcelamento %</th><th>Frete grátis mín.</th><th>Margem alvo %</th></tr></thead><tbody>
+        ${premises.map((premise) => `<tr data-premise="${escapeHtml(premise.codigo)}">
+          <td><strong>${escapeHtml(premise.nome)}</strong></td>
+          <td><input class="compact-input" data-premise-field="comissaoPercentual" value="${premise.comissaoPercentual}"></td>
+          <td><input class="compact-input" data-premise-field="taxaFixa" value="${premise.taxaFixa}"></td>
+          <td><input class="compact-input" data-premise-field="impostoPercentual" value="${premise.impostoPercentual}"></td>
+          <td><input class="compact-input" data-premise-field="adsPercentual" value="${premise.adsPercentual}"></td>
+          <td><input class="compact-input" data-premise-field="parcelamentoPercentual" value="${premise.parcelamentoPercentual}"></td>
+          <td><input class="compact-input" data-premise-field="freteGratisMinimo" value="${premise.freteGratisMinimo}"></td>
+          <td><input class="compact-input" data-premise-field="margemAlvoPercentual" value="${premise.margemAlvoPercentual}"></td>
+        </tr>`).join("")}
+      </tbody></table></div>
+      <button class="primary" id="saveProfitabilityPremises" type="button">Salvar premissas</button>
+    </section>
+    <section class="card">
+      <h3>Auditoria de margem por SKU</h3>
+      <div class="table"><table><thead><tr><th>SKU</th><th>Canal</th><th>Preço</th><th>Preço mínimo</th><th>Lucro</th><th>Margem</th><th>Score</th><th>Alertas</th><th>Ação recomendada</th></tr></thead><tbody>
+        ${profitabilityRows(skus)}
+      </tbody></table></div>
+    </section>
+  </section>`;
+  $("auditProfitability").onclick = auditProfitability;
+  $("exportProfitability").onclick = () => exportProfitabilityCsv(state.profitabilitySkus);
+  $("downloadProfitabilityModel").onclick = downloadProfitabilityModel;
+  $("importProfitabilityButton").onclick = () => $("importProfitabilityFile").click();
+  $("importProfitabilityFile").onchange = importProfitabilityCsv;
+  $("saveProfitabilityPremises").onclick = saveProfitabilityPremises;
+}
+
+function profitabilityRows(skus) {
+  return skus.map((item) => {
+    const result = item.resultado;
+    const scoreClass = result.score >= 75 ? "ok" : result.score >= 50 ? "warn" : "bad";
+    return `<tr>
+      <td><strong>${escapeHtml(item.sku)}</strong><br><span>${escapeHtml(item.nome)}</span></td>
+      <td>${escapeHtml(channelLabel(item.canal))}</td>
+      <td>${brl(result.precoVenda)}</td>
+      <td>${brl(result.precoMinimo)}</td>
+      <td>${brl(result.lucroEstimado)}</td>
+      <td>${result.margemPercentual}%</td>
+      <td><span class="badge ${scoreClass}">${result.score}</span></td>
+      <td>${result.alertas.map((alert) => badge(alert)).join(" ")}</td>
+      <td>${escapeHtml(result.acaoRecomendada)}</td>
+    </tr>`;
+  }).join("") || `<tr><td colspan="9" class="empty-state">Nenhum SKU cadastrado.</td></tr>`;
+}
+
+function channelLabel(code) {
+  return { MERCADO_LIVRE: "Mercado Livre", SHOPEE: "Shopee", SITE_PROPRIO: "Loja própria" }[code] || code;
+}
+
+async function auditProfitability() {
+  const result = await request("/api/profitability/audit", { method: "POST" });
+  state.profitabilitySkus = result.items;
+  toast(`Auditoria registrada para ${result.total} SKU(s).`);
+  renderProfitability();
+}
+
+function exportProfitabilityCsv(skus) {
+  const rows = [
+    ["sku", "nome", "canal", "precoVenda", "precoMinimo", "lucroEstimado", "margemPercentual", "score", "alertas", "acaoRecomendada"],
+    ...skus.map((item) => [
+      item.sku,
+      item.nome,
+      item.canal,
+      item.resultado.precoVenda,
+      item.resultado.precoMinimo,
+      item.resultado.lucroEstimado,
+      item.resultado.margemPercentual,
+      item.resultado.score,
+      item.resultado.alertas.join(", "),
+      item.resultado.acaoRecomendada,
+    ]),
+  ];
+  downloadCsv("rentabilidade-marketplace.csv", rows);
+}
+
+function downloadProfitabilityModel() {
+  downloadCsv("modelo-skus-rentabilidade.csv", [
+    ["sku", "nome", "canal", "custoProduto", "precoVenda", "custoEmbalagem", "freteEstimado", "freteGratis", "pesoKg", "comprimentoCm", "larguraCm", "alturaCm", "fatorCubagem", "estoque", "status"],
+    ["SKU-EXEMPLO", "Produto exemplo", "MERCADO_LIVRE", "25.00", "79.90", "2.50", "18.90", "sim", "0.8", "22", "16", "10", "300", "10", "ATIVO"],
+  ]);
+}
+
+async function importProfitabilityCsv() {
+  const file = $("importProfitabilityFile").files[0];
+  if (!file) return;
+  const text = await file.text();
+  const rows = parseCsv(text);
+  const result = await request("/api/profitability/import", { method: "POST", body: JSON.stringify({ rows }) });
+  toast(`Importados: ${result.imported}. Erros: ${result.errors.length}.`);
+  renderProfitability();
+}
+
+async function saveProfitabilityPremises() {
+  const premises = state.profitabilityPremises.map((premise) => {
+    const row = document.querySelector(`[data-premise="${premise.codigo}"]`);
+    const payload = { codigo: premise.codigo };
+    row.querySelectorAll("[data-premise-field]").forEach((input) => {
+      payload[input.dataset.premiseField] = input.value;
+    });
+    return payload;
+  });
+  await request("/api/profitability/premises/save", { method: "POST", body: JSON.stringify({ premises }) });
+  toast("Premissas salvas e auditoria registrada.");
+  renderProfitability();
+}
+
+function parseCsv(text) {
+  const lines = text.split(/\r?\n/).filter((line) => line.trim());
+  if (!lines.length) return [];
+  const delimiter = lines[0].includes(";") ? ";" : ",";
+  const headers = splitCsvLine(lines[0], delimiter).map((item) => item.trim());
+  return lines.slice(1).map((line) => {
+    const values = splitCsvLine(line, delimiter);
+    return Object.fromEntries(headers.map((header, index) => [header, values[index] ?? ""]));
+  });
+}
+
+function splitCsvLine(line, delimiter) {
+  const values = [];
+  let current = "";
+  let quoted = false;
+  for (const char of line) {
+    if (char === '"') quoted = !quoted;
+    else if (char === delimiter && !quoted) {
+      values.push(current);
+      current = "";
+    } else {
+      current += char;
+    }
+  }
+  values.push(current);
+  return values.map((value) => value.trim().replace(/^"|"$/g, ""));
+}
+
+function downloadCsv(filename, rows) {
+  const csv = rows.map((row) => row.map(csvCell).join(";")).join("\n");
+  const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = filename;
+  link.click();
+  URL.revokeObjectURL(url);
 }
 
 function formatDateTimeBR(value) {
@@ -1675,6 +1852,7 @@ function navigate(view) {
   if (view === "dashboard") return renderDashboard();
   if (view === "orders") return renderOrders();
   if (view === "quote") return renderQuote();
+  if (view === "profitability") return renderProfitability();
   if (view === "import") return renderImport();
   if (view === "carriers") return renderCarriers();
   if (view === "channels") return renderChannels();

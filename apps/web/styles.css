@@ -350,6 +350,7 @@ p { color: var(--muted); line-height: 1.5; }
 .metric-icon.blue { color: #1976d2; }
 .metric-icon.orange { color: #f59e0b; }
 .metric-icon.red { color: #dc2626; }
+.metric-icon.green { color: #168640; }
 .metric-icon::before,
 .metric-icon::after {
   content: "";
@@ -587,6 +588,26 @@ th { background: #f8fafc; color: var(--muted); font-size: 12px; text-transform: 
 .warn { background: #fff3df; color: var(--warning); }
 .bad { background: #fee4e2; color: var(--danger); }
 .toolbar { display: flex; gap: 10px; align-items: end; margin-bottom: 16px; flex-wrap: wrap; }
+.compact-input {
+  width: 96px;
+  min-width: 80px;
+  min-height: 34px;
+  padding: 7px 8px;
+}
+.profitability-page { display: grid; gap: 16px; animation: dashboardIn .28s ease-out both; }
+.profitability-page .toolbar { justify-content: flex-end; }
+.profitability-page .dashboard-metric { min-height: 84px; }
+.profitability-page .dashboard-metric span { max-width: 150px; }
+.profitability-page .table table { min-width: 1120px; }
+.profitability-page .table th {
+  color: #020817;
+  font-size: 12px;
+  font-weight: 800;
+  text-transform: none;
+}
+.profitability-page .table td { font-size: 12px; vertical-align: middle; }
+.profitability-page .table td span { color: #40506b; font-size: 12px; }
+.profitability-page .table input.compact-input { background: #f8fafc; border-color: #d4deeb; border-radius: 6px; }
 .orders-page { display: grid; gap: 16px; animation: dashboardIn .28s ease-out both; }
 .orders-actions { display: flex; justify-content: flex-end; margin-top: -52px; min-height: 36px; pointer-events: none; }
 .orders-actions button { pointer-events: auto; }
