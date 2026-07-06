@@ -31,9 +31,12 @@ A V2 inclui:
 - Banco SQLite real.
 - Autenticacao por email e senha.
 - Motor de cotacao separado da interface.
+- Motor de rentabilidade por marketplace separado da interface.
 - Importacao XLSX via API.
+- Importacao e exportacao CSV para auditoria de rentabilidade.
 - Integracoes preparadas para Protheus, Mercado Livre e Shopee.
-- Gestao de transportadoras, tarifas, pedidos, relatorios, auditoria e configuracoes.
+- Gestao de transportadoras, tarifas, pedidos, relatorios, auditoria, configuracoes e usuarios.
+- Modulo Rentabilidade Marketplace com preco minimo, margem, score por SKU, alerta de prejuizo e alerta por cubagem.
 - Testes automatizados.
 
 ## Como rodar a V1
@@ -104,6 +107,25 @@ Ou, se o comando `python` nao estiver disponivel:
 ```powershell
 py -m unittest discover -s tests
 ```
+
+Os testes cobrem os principais motores e fluxos de backend:
+
+- Cotacao de frete.
+- Rentabilidade Marketplace.
+- Usuarios e permissoes.
+- Modelo operacional da V2.
+
+## Documentacao
+
+A documentacao principal fica em `docs/`:
+
+- `docs/requisitos.md`: requisitos funcionais, nao funcionais e regras de negocio.
+- `docs/arquitetura.md`: arquitetura atual, camadas, fluxos e riscos.
+- `docs/modelo-dados.md`: entidades, tabelas e governanca de dados.
+- `docs/plano-implantacao.md`: caminho para homologacao/producao.
+- `docs/canvas-fretehub.md`: estrategia de produto e posicionamento.
+
+Esses documentos estao voltados para uso real do produto, nao para apresentacao academica.
 
 ## GitHub e branches
 
@@ -179,14 +201,23 @@ fretehub-mvp/
       integrations.py
       migrations.py
       permissions.py
+      profitability_engine.py
       quote_engine.py
       xlsx_importer.py
+  docs/
+    requisitos.md
+    arquitetura.md
+    modelo-dados.md
+    plano-implantacao.md
+    canvas-fretehub.md
   tests/
 ```
 
 ## Observacoes importantes
 
 - As integracoes externas estao preparadas, mas nao fazem chamadas reais sem credenciais/API tokens.
+- O modulo Rentabilidade Marketplace usa premissas configuraveis por canal. Antes de operar com dados reais, revise com Financeiro/Comercial as comissoes, impostos, ads, parcelamento, frete gratis e margem alvo.
+- A auditoria de rentabilidade grava snapshot do resultado e da premissa aplicada para manter rastreabilidade.
 - A V2 deve ser rodada localmente ou em um servidor que suporte Python.
 - A V1 deve permanecer preservada como demonstracao.
 - Antes de alterar arquivos importantes, revise o estado com `git status`.
